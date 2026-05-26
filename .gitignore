@@ -1,0 +1,37 @@
+# Planning documents - personal notes, never commit
+项目指导.md
+项目设计-InsightAgent.md
+技术栈调研-2026.md
+未来想法.md
+tech_docs/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Drawings / notes
+*.drawio
+*.drawio.bkp
+notes/
+
+# Local environment overrides
+.env
+.env.*
+*.local.yml
+*.local.properties
+
+# Tool caches
+.claude/
+
+# Local Maven binary (downloaded by setup, ~30MB unpacked)
+.tools/
+
+# Build artifacts (covered also in subproject .gitignore)
+target/
+build/

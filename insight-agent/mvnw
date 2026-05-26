@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Local Maven Wrapper (bash) - forwards to ../.tools/apache-maven-3.9.9
+# Usage:  ./mvnw <goals>     (e.g. ./mvnw spring-boot:run)
+
+set -e
+PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
+MAVEN_HOME="${PROJECT_DIR}/../.tools/apache-maven-3.9.9"
+
+if [[ ! -x "${MAVEN_HOME}/bin/mvn" ]]; then
+    echo "[mvnw] ERROR: Maven not found at ${MAVEN_HOME}"
+    echo "[mvnw] Re-download with: curl -L -o ../.tools/maven.zip https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip"
+    exit 1
+fi
+
+exec "${MAVEN_HOME}/bin/mvn" "$@"
