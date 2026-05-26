@@ -1,0 +1,51 @@
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: insight-agent
+
+  ai:
+    deepseek:
+      # Spring AI auto-config requires hasText, so default to a placeholder.
+      # Real calls will 401 until you `setx DEEPSEEK_API_KEY sk-...` and reopen shell.
+      api-key: ${DEEPSEEK_API_KEY:placeholder-set-DEEPSEEK_API_KEY-env-var}
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.3
+          max-tokens: 4096
+
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        options:
+          model: gemma3:1b
+      embedding:
+        options:
+          model: bge-m3
+
+    # PGVector dimensions MUST be 1024 for BGE-M3.
+    # Enabled later when PostgreSQL+pgvector is provisioned.
+    # vectorstore:
+    #   pgvector:
+    #     dimensions: 1024
+    #     distance-type: COSINE_DISTANCE
+    #     index-type: HNSW
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /**
+      packages-to-scan: com.insightagent.controller
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
