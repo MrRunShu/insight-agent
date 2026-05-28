@@ -90,6 +90,14 @@
             <version>${hutool.version}</version>
         </dependency>
 
+        <!-- Kryo: chat-memory file persistence — Message subclasses lack no-arg ctor,
+             Jackson can't roundtrip them cleanly; Kryo+StdInstantiatorStrategy can. -->
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+            <version>5.6.2</version>
+        </dependency>
+
         <!-- Knife4j: Swagger UI enhancement -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
