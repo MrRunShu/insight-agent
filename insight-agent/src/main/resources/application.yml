@@ -19,7 +19,7 @@ spring:
           max-tokens: 4096
 
     ollama:
-      base-url: http://localhost:11434
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       chat:
         options:
           model: gemma3:1b
@@ -55,4 +55,4 @@ app:
   memory:
     # Where FileChatMemoryRepository writes one .kryo file per conversation.
     # Override per env via APP_MEMORY_DIR. Default sits next to the running JAR.
-    dir: ${user.dir}/chat-memory
+    dir: ${APP_MEMORY_DIR:${user.dir}/chat-memory}
