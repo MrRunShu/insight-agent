@@ -40,7 +40,6 @@ build/
 *.local.properties
 .env
 .env.*
-!.env.example
 
 ### Runtime data ###
 chat-memory/
