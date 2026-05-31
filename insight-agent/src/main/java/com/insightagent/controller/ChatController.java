@@ -45,4 +45,15 @@ public class ChatController {
                 : request.chatId();
         return insightApp.doChatWithReport(chatId, request.message(), request.selectedSnippet());
     }
+
+    @PostMapping("/rag")
+    @Operation(summary = "RAG-augmented chat — reply is grounded in the local knowledge base " +
+            "(logical fallacies, media literacy, fact-checking methodology)")
+    public ChatResponse ragChat(@RequestBody ChatRequest request) {
+        String chatId = (request.chatId() == null || request.chatId().isBlank())
+                ? UUID.randomUUID().toString()
+                : request.chatId();
+        String reply = insightApp.doChatWithRag(chatId, request.message(), request.selectedSnippet());
+        return new ChatResponse(chatId, reply);
+    }
 }

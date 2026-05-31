@@ -6,9 +6,12 @@ import com.insightagent.domain.AnalysisReport;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
@@ -28,6 +31,10 @@ public class InsightApp {
     private static final int MEMORY_WINDOW = 20;
 
     private final ChatClient chatClient;
+
+    /** Injected after construction — avoids circular dependency with VectorStoreConfig. */
+    @Autowired
+    private VectorStore insightVectorStore;
 
     public InsightApp(ChatModel deepSeekChatModel,
                       FileChatMemoryRepository memoryRepository,
@@ -93,5 +100,32 @@ public class InsightApp {
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .call()
                 .entity(AnalysisReport.class);
+    }
+
+    /**
+     * Tier 1 chat augmented with the local knowledge base (RAG).
+     *
+     * <p>Before the request reaches DeepSeek, {@link QuestionAnswerAdvisor}
+     * retrieves the top-k most semantically similar document chunks from
+     * {@code insightVectorStore} and appends them to the user prompt as context.
+     * This lets the model cite specific facts from our curated knowledge base
+     * (logical-fallacy definitions, media-literacy guides, fact-checking methodology).
+     *
+     * @param chatId          stable conversation id
+     * @param message         user message
+     * @param selectedSnippet optional highlighted news snippet
+     * @return assistant reply grounded in the knowledge base
+     */
+    public String doChatWithRag(String chatId, String message, String selectedSnippet) {
+        String userText = (selectedSnippet == null || selectedSnippet.isBlank())
+                ? message
+                : message + "\n\n[USER-SELECTED SNIPPET]\n" + selectedSnippet;
+
+        return chatClient.prompt()
+                .user(userText)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .advisors(new QuestionAnswerAdvisor(insightVectorStore))
+                .call()
+                .content();
     }
 }

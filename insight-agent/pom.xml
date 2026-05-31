@@ -90,6 +90,18 @@
             <version>${hutool.version}</version>
         </dependency>
 
+        <!-- RAG: Markdown document reader -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-markdown-document-reader</artifactId>
+        </dependency>
+
+        <!-- RAG: QuestionAnswerAdvisor (vector-store advisor) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+        </dependency>
+
         <!-- Kryo: chat-memory file persistence — Message subclasses lack no-arg ctor,
              Jackson can't roundtrip them cleanly; Kryo+StdInstantiatorStrategy can. -->
         <dependency>
