@@ -6,8 +6,8 @@ import dev.langchain4j.model.openai.OpenAiChatModel;
 /**
  * Way 4/4 — LangChain4j {@code OpenAiChatModel} pointed at DeepSeek's OpenAI-compatible API.
  *
- * Uses the upstream {@code langchain4j-open-ai} module
- * with a custom baseUrl so we don't depend on Alibaba's fork.
+ * Uses the upstream {@code langchain4j-open-ai} module with a custom baseUrl
+ * so there is no dependency on any platform-specific SDK.
  */
 public class LangChain4jDeepSeekInvoke {
 

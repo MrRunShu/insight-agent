@@ -9,8 +9,8 @@ import com.openai.models.ChatModel;
 /**
  * Way 2/4 — official OpenAI Java SDK pointed at DeepSeek (DeepSeek is OpenAI-compatible).
  *
- * Uses the standard {@code openai-java} SDK with
- * a custom baseUrl because DeepSeek is the project's actual model.
+ * Uses the standard {@code openai-java} SDK with a custom baseUrl targeting DeepSeek's
+ * OpenAI-compatible API endpoint.
  */
 public class SdkDeepSeekInvoke {
 

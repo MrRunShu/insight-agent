@@ -7,7 +7,6 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <!--  -->
         <version>3.4.4</version>
         <relativePath/>
     </parent>
@@ -20,10 +19,9 @@
 
     <properties>
         <java.version>17</java.version>
-        <!--  -->
         <spring-ai.version>1.0.0</spring-ai.version>
         <!-- Knife4j 4.4.0 bundles springdoc 2.3.0 which breaks against Spring Boot 3.4.
-             Use 4.5.0 (project-guidance approved alternative) which bundles springdoc 2.7.0 natively. -->
+             4.5.0 bundles springdoc 2.7.0 natively — use that instead. -->
         <knife4j.version>4.5.0</knife4j.version>
         <hutool.version>5.8.37</hutool.version>
         <langchain4j.version>1.0.0</langchain4j.version>
