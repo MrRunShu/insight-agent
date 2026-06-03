@@ -100,6 +100,19 @@
             <artifactId>spring-ai-advisors-vector-store</artifactId>
         </dependency>
 
+        <!-- RAG: PGVector persistent vector store -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Kryo: chat-memory file persistence — Message subclasses lack no-arg ctor,
              Jackson can't roundtrip them cleanly; Kryo+StdInstantiatorStrategy can. -->
         <dependency>

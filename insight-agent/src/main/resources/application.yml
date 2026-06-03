@@ -7,6 +7,12 @@ spring:
   application:
     name: insight-agent
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/insightdb
+    username: postgres
+    password: ${POSTGRES_PASSWORD:insight}
+    driver-class-name: org.postgresql.Driver
+
   ai:
     deepseek:
       # Spring AI auto-config requires hasText, so default to a placeholder.
@@ -27,13 +33,13 @@ spring:
         options:
           model: bge-m3
 
-    # PGVector dimensions MUST be 1024 for BGE-M3.
-    # Enabled later when PostgreSQL+pgvector is provisioned.
-    # vectorstore:
-    #   pgvector:
-    #     dimensions: 1024
-    #     distance-type: COSINE_DISTANCE
-    #     index-type: HNSW
+    vectorstore:
+      pgvector:
+        # BGE-M3 produces 1024-dim vectors
+        dimensions: 1024
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
+        initialize-schema: true
 
 springdoc:
   swagger-ui:
