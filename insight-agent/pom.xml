@@ -100,6 +100,13 @@
             <artifactId>spring-ai-advisors-vector-store</artifactId>
         </dependency>
 
+        <!-- RAG: advanced pipeline — RetrievalAugmentationAdvisor, ContextualQueryAugmenter,
+             VectorStoreDocumentRetriever, query transformers / expanders (Phase 5) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-rag</artifactId>
+        </dependency>
+
         <!-- RAG: PGVector persistent vector store -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
