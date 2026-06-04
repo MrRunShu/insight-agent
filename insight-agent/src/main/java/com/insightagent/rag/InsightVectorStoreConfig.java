@@ -39,6 +39,11 @@ public class InsightVectorStoreConfig {
                 .initializeSchema(true)                                    // create table if absent
                 .build();
 
+        // Trigger schema initialisation now (creates vector_store table + HNSW index).
+        // Normally Spring calls afterPropertiesSet() after the @Bean method returns,
+        // but we need the table to exist before the COUNT query below.
+        store.afterPropertiesSet();
+
         // Only embed on first run — skip if docs are already persisted
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM vector_store", Integer.class);
@@ -49,7 +54,6 @@ public class InsightVectorStoreConfig {
         } else {
             log.info("Vector store has {} documents — reusing existing embeddings.", count);
         }
-
         return store;
     }
 }
