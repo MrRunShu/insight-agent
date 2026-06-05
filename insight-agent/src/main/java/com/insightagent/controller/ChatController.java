@@ -56,4 +56,15 @@ public class ChatController {
         String reply = insightApp.doChatWithRag(chatId, request.message(), request.selectedSnippet());
         return new ChatResponse(chatId, reply);
     }
+
+    @PostMapping("/tools")
+    @Operation(summary = "Tool-calling chat — the model can fetch a news URL or save files. "
+            + "Pass a URL in the message and the model will read the article automatically.")
+    public ChatResponse toolsChat(@RequestBody ChatRequest request) {
+        String chatId = (request.chatId() == null || request.chatId().isBlank())
+                ? UUID.randomUUID().toString()
+                : request.chatId();
+        String reply = insightApp.doChatWithTools(chatId, request.message(), request.selectedSnippet());
+        return new ChatResponse(chatId, reply);
+    }
 }

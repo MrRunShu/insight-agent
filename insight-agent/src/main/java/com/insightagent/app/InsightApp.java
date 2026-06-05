@@ -3,6 +3,8 @@ package com.insightagent.app;
 import com.insightagent.advisor.LoggerAdvisor;
 import com.insightagent.chatmemory.FileChatMemoryRepository;
 import com.insightagent.domain.AnalysisReport;
+import com.insightagent.tools.FileOperationTool;
+import com.insightagent.tools.WebScrapeTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -143,6 +145,36 @@ public class InsightApp {
                 .user(userText)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
                 .advisors(ragAdvisor)
+                .call()
+                .content();
+    }
+
+    /**
+     * Tier 1 chat with tool calling enabled (Phase 6).
+     *
+     * <p>Registered tools:
+     * <ul>
+     *   <li>{@link WebScrapeTool#fetchWebPage} — let the model fetch a news URL on demand</li>
+     *   <li>{@link FileOperationTool#writeFile} / {@link FileOperationTool#readFile}
+     *       — persist analysis reports to {@code ./tmp/insight/}</li>
+     * </ul>
+     *
+     * <p>Typical usage: user sends a URL in the message; the model calls {@code fetchWebPage},
+     * receives the article text, then produces a structured analysis — all in one turn.
+     *
+     * @param chatId          stable conversation id
+     * @param message         user message (may contain a news URL)
+     * @param selectedSnippet optional pre-selected text; if blank the model decides whether
+     *                        to fetch a URL from the message
+     * @return assistant reply, potentially after one or more tool-call round-trips
+     */
+    public String doChatWithTools(String chatId, String message, String selectedSnippet) {
+        String userText = buildUserText(message, selectedSnippet);
+
+        return chatClient.prompt()
+                .user(userText)
+                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
+                .tools(new WebScrapeTool(), new FileOperationTool())
                 .call()
                 .content();
     }
