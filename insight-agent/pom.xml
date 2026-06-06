@@ -107,6 +107,12 @@
             <artifactId>spring-ai-rag</artifactId>
         </dependency>
 
+        <!-- MCP: expose InsightAgent tools as an MCP server (SSE over Spring MVC) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
+
         <!-- RAG: PGVector persistent vector store -->
         <dependency>
             <groupId>org.springframework.ai</groupId>

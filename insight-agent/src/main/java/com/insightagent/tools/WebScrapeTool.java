@@ -7,6 +7,7 @@ import cn.hutool.http.HttpUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.stereotype.Component;
 
 /**
  * Tool: fetch and extract readable text content from a URL.
@@ -14,6 +15,7 @@ import org.springframework.ai.tool.annotation.ToolParam;
  * <p>Strips HTML tags so the model receives plain text, not markup.
  * Truncates to {@value #MAX_CHARS} chars to stay within token limits.
  */
+@Component
 @Slf4j
 public class WebScrapeTool {
 

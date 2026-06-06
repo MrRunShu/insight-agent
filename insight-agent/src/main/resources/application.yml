@@ -33,6 +33,14 @@ spring:
         options:
           model: bge-m3
 
+    mcp:
+      server:
+        name: insight-agent-mcp
+        version: 1.0.0
+        type: SYNC
+        sse-message-endpoint: /mcp/message
+        sse-endpoint: /sse
+
     vectorstore:
       pgvector:
         # BGE-M3 produces 1024-dim vectors

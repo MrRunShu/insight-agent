@@ -3,8 +3,6 @@ package com.insightagent.app;
 import com.insightagent.advisor.LoggerAdvisor;
 import com.insightagent.chatmemory.FileChatMemoryRepository;
 import com.insightagent.domain.AnalysisReport;
-import com.insightagent.tools.FileOperationTool;
-import com.insightagent.tools.WebScrapeTool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
@@ -14,6 +12,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.rag.advisor.RetrievalAugmentationAdvisor;
 import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugmenter;
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
+import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -48,6 +47,10 @@ public class InsightApp {
     /** Injected after construction — avoids circular dependency with VectorStoreConfig. */
     @Autowired
     private VectorStore insightVectorStore;
+
+    /** Tool registry shared with MCP server — avoids duplicating tool instances. */
+    @Autowired
+    private ToolCallbackProvider insightToolCallbackProvider;
 
     public InsightApp(ChatModel deepSeekChatModel,
                       FileChatMemoryRepository memoryRepository,
@@ -174,7 +177,7 @@ public class InsightApp {
         return chatClient.prompt()
                 .user(userText)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, chatId))
-                .tools(new WebScrapeTool(), new FileOperationTool())
+                .tools(insightToolCallbackProvider)
                 .call()
                 .content();
     }

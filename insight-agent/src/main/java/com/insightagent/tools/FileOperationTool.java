@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.stereotype.Component;
 
 import java.io.File;
 
@@ -13,6 +14,7 @@ import java.io.File;
  * <p>The save directory is isolated so the AI cannot touch arbitrary paths.
  * Useful for persisting analysis reports, exporting summaries, etc.
  */
+@Component
 @Slf4j
 public class FileOperationTool {
 
