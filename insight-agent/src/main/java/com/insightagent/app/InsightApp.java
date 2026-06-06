@@ -1,6 +1,8 @@
 package com.insightagent.app;
 
 import com.insightagent.advisor.LoggerAdvisor;
+import com.insightagent.agent.BaseAgent;
+import com.insightagent.agent.ToolCallAgent;
 import com.insightagent.chatmemory.FileChatMemoryRepository;
 import com.insightagent.domain.AnalysisReport;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +25,7 @@ import org.springframework.stereotype.Component;
  * Tier 1 entry point — basic chat for news analysis. Default response path in the three-tier
  * design: low-cost single LLM call with conversation memory.
  *
- * <p>Tier 2 (per-function endpoints) and Tier 3 (ReAct deep analysis) live in their own
- * services in later phases; both will share {@link FileChatMemoryRepository} for continuity.
+ * <p>Tier 3 (ReAct agent loop) is exposed via {@link #doRunAgent} — same bean, different method.
  */
 @Component
 @Slf4j
@@ -180,6 +181,33 @@ public class InsightApp {
                 .tools(insightToolCallbackProvider)
                 .call()
                 .content();
+    }
+
+    /**
+     * Tier 3 ReAct agent loop (Phase 8).
+     *
+     * <p>Creates a fresh {@link ToolCallAgent} for the request — the agent maintains its own
+     * in-memory message history across steps and terminates when the model signals completion
+     * or the step limit is reached. Unlike the Tier 1 methods above, there is no persistent
+     * {@code chatId} memory because the agent's multi-step chain already acts as its own context.
+     *
+     * @param message         user message or task description
+     * @param selectedSnippet optional news snippet; folded into the first user message
+     * @return final aggregated result from all agent steps
+     */
+    public String doRunAgent(String message, String selectedSnippet) {
+        String userText = buildUserText(message, selectedSnippet);
+
+        String agentSystemPrompt = """
+                You are InsightAgent, a multi-step news analysis assistant.
+                You have access to tools: fetchWebPage (fetch a URL), writeFile (save a file), readFile (read a saved file).
+                Break complex tasks into steps. Fetch URLs to get article content. Analyse thoroughly.
+                When you have fully completed the task, end your final response with [FINISHED].
+                """;
+
+        ToolCallAgent agent = new ToolCallAgent(
+                chatClient, insightToolCallbackProvider, agentSystemPrompt, BaseAgent.DEFAULT_MAX_STEPS);
+        return agent.run(userText);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

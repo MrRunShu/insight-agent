@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 /**
- * Tier 1 chat endpoint (the default path in the three-tier response design).
- * Tier 2 per-function analysis endpoints arrive in Phase 6, Tier 3 ReAct in Phase 8.
+ * Chat endpoints covering all three tiers of the response design:
+ * Tier 1 (basic chat), Tier 1+ (RAG, tools), and Tier 3 (ReAct agent loop).
  */
 @RestController
 @RequestMapping("/chat")
@@ -66,5 +66,13 @@ public class ChatController {
                 : request.chatId();
         String reply = insightApp.doChatWithTools(chatId, request.message(), request.selectedSnippet());
         return new ChatResponse(chatId, reply);
+    }
+
+    @PostMapping("/agent")
+    @Operation(summary = "Tier 3 ReAct agent — multi-step reasoning with tool calls. "
+            + "Pass a URL or complex analysis task; the agent fetches, reasons, and iterates autonomously.")
+    public ChatResponse agentChat(@RequestBody ChatRequest request) {
+        String reply = insightApp.doRunAgent(request.message(), request.selectedSnippet());
+        return new ChatResponse(null, reply);
     }
 }
