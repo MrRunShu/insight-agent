@@ -69,7 +69,7 @@ public class ToolCallAgent extends BaseAgent {
         String response = chatClient.prompt()
                 .system(systemPrompt)
                 .messages(history)
-                .tools(tools)
+                .toolCallbacks(tools)
                 .call()
                 .content();
 
