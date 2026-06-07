@@ -26,7 +26,7 @@ import java.util.List;
  * can refer back to earlier results.
  */
 @Slf4j
-public class ToolCallAgent extends BaseAgent {
+public class ReActAgent extends BaseAgent {
 
     private static final String FINISH_MARKER = "[FINISHED]";
 
@@ -37,10 +37,10 @@ public class ToolCallAgent extends BaseAgent {
     /** In-memory message history for this agent run. */
     private final List<Message> history = new ArrayList<>();
 
-    public ToolCallAgent(ChatClient chatClient,
-                         ToolCallbackProvider tools,
-                         String systemPrompt,
-                         int maxSteps) {
+    public ReActAgent(ChatClient chatClient,
+                      ToolCallbackProvider tools,
+                      String systemPrompt,
+                      int maxSteps) {
         super(maxSteps);
         this.chatClient = chatClient;
         this.tools = tools;
@@ -78,7 +78,7 @@ public class ToolCallAgent extends BaseAgent {
 
         // Detect completion markers — model signals it's done
         if (response.contains(FINISH_MARKER) || looksLikeFinalAnswer(response)) {
-            log.info("[ToolCallAgent] Final answer detected, finishing");
+            log.info("[ReActAgent] Final answer detected, finishing");
             finish();
             return response.replace(FINISH_MARKER, "").trim();
         }

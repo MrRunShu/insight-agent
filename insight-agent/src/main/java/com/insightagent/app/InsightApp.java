@@ -2,7 +2,7 @@ package com.insightagent.app;
 
 import com.insightagent.advisor.LoggerAdvisor;
 import com.insightagent.agent.BaseAgent;
-import com.insightagent.agent.ToolCallAgent;
+import com.insightagent.agent.ReActAgent;
 import com.insightagent.chatmemory.FileChatMemoryRepository;
 import com.insightagent.domain.AnalysisReport;
 import lombok.extern.slf4j.Slf4j;
@@ -205,7 +205,7 @@ public class InsightApp {
                 When you have fully completed the task, end your final response with [FINISHED].
                 """;
 
-        ToolCallAgent agent = new ToolCallAgent(
+        ReActAgent agent = new ReActAgent(
                 chatClient, insightToolCallbackProvider, agentSystemPrompt, BaseAgent.DEFAULT_MAX_STEPS);
         return agent.run(userText);
     }
