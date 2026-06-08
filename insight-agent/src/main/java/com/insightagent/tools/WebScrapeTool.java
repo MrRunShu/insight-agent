@@ -49,6 +49,11 @@ public class WebScrapeTool {
                     .replaceAll("\\s{2,}", " ")
                     .trim();
 
+            if (text.length() < 50) {
+                log.warn("[WebScrapeTool] content too short ({} chars) — likely JS-rendered: {}", text.length(), url);
+                return "无法获取页面内容（内容为空，该页面可能需要 JavaScript 渲染）。URL: " + url
+                        + "\n请根据你已有的知识对该主题进行分析，无需重试抓取。";
+            }
             if (text.length() > MAX_CHARS) {
                 text = text.substring(0, MAX_CHARS) + "\n...[truncated]";
             }

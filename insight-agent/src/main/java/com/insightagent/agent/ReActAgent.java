@@ -1,50 +1,44 @@
 package com.insightagent.agent;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
-import org.springframework.ai.tool.ToolCallbackProvider;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * ReAct agent backed by a Spring AI {@link ChatClient} with tool calling.
+ * Abstract ReAct agent — defines the Reasoning + Acting pattern on top of {@link BaseAgent}.
  *
- * <p>Implements the ReAct (Reasoning + Acting) loop:
+ * <p>Splits each loop iteration into two distinct phases:
  * <ol>
- *   <li><b>Think</b>: ask the LLM (with all registered tools) what to do next.
- *       If the model wants to call tools, Spring AI executes them and returns
- *       the results in the same call — this is the "Act + Observe" phase.</li>
- *   <li><b>Finish</b>: if the model produces a final text answer (no tool calls),
- *       the step signals completion.</li>
+ *   <li><b>Think</b>: call the LLM and decide whether tool calls are needed.</li>
+ *   <li><b>Act</b>: execute the pending tool calls and feed results back into history.</li>
  * </ol>
  *
- * <p>Conversation history is maintained in-memory across steps so the model
- * can refer back to earlier results.
+ * <p>If {@link #think()} determines that the model produced a final answer (no tool calls),
+ * the step finishes immediately — no {@code act()} is called. This makes completion detection
+ * structural rather than relying on magic-string heuristics.
+ *
+ * <p>Conversation history is maintained across steps so each LLM call sees the full
+ * reasoning chain.
+ *
+ * @see ToolCallAgent concrete implementation with Spring AI tool execution
  */
 @Slf4j
-public class ReActAgent extends BaseAgent {
+public abstract class ReActAgent extends BaseAgent {
 
-    private static final String FINISH_MARKER = "[FINISHED]";
+    /** Conversation history maintained across all steps in this agent run. */
+    protected final List<Message> history = new ArrayList<>();
 
-    private final ChatClient chatClient;
-    private final ToolCallbackProvider tools;
-    private final String systemPrompt;
+    /**
+     * Set by {@link #think()} when it determines the model produced a final answer.
+     * {@link #step()} returns this value when {@code think()} returns {@code false}.
+     */
+    protected String thinkResult;
 
-    /** In-memory message history for this agent run. */
-    private final List<Message> history = new ArrayList<>();
-
-    public ReActAgent(ChatClient chatClient,
-                      ToolCallbackProvider tools,
-                      String systemPrompt,
-                      int maxSteps) {
+    protected ReActAgent(int maxSteps) {
         super(maxSteps);
-        this.chatClient = chatClient;
-        this.tools = tools;
-        this.systemPrompt = systemPrompt;
     }
 
     // ── BaseAgent hooks ───────────────────────────────────────────────────────
@@ -56,51 +50,47 @@ public class ReActAgent extends BaseAgent {
     }
 
     /**
-     * One ReAct step: send current history to the LLM (with tools), get response.
+     * One ReAct step: think first, then act only if needed.
      *
-     * <p>Spring AI handles the tool-execution sub-loop internally: if the model
-     * requests tools, the framework executes them and feeds results back before
-     * returning. The {@code content()} we receive is always the model's final
-     * text for this step.
+     * <p>This method is {@code final} — subclasses implement {@link #think()} and
+     * {@link #act()} instead of overriding the step structure.
      */
     @Override
-    protected String step() {
-        // Build prompt from accumulated history
-        String response = chatClient.prompt()
-                .system(systemPrompt)
-                .messages(history)
-                .toolCallbacks(tools)
-                .call()
-                .content();
-
-        // Add assistant response to history so next step has context
-        history.add(new AssistantMessage(response));
-
-        // Detect completion markers — model signals it's done
-        if (response.contains(FINISH_MARKER) || looksLikeFinalAnswer(response)) {
-            log.info("[ReActAgent] Final answer detected, finishing");
+    protected final String step() {
+        boolean needsAct = think();
+        if (!needsAct) {
+            log.info("[ReActAgent] No tool calls — final answer reached");
             finish();
-            return response.replace(FINISH_MARKER, "").trim();
+            return thinkResult != null ? thinkResult.trim() : "";
         }
-
-        // Otherwise add a continuation prompt so the model keeps working
-        history.add(new UserMessage(
-                "Continue. If you have fully completed the task, end your response with "
-                        + FINISH_MARKER));
-        return response;
+        return act();
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    // ── abstract methods ──────────────────────────────────────────────────────
 
     /**
-     * Heuristic: if the response looks like a final structured answer
-     * (conclusion, summary, analysis), treat it as complete.
+     * Reasoning phase: send current history to the LLM and decide what to do next.
+     *
+     * <p>Implementations must:
+     * <ul>
+     *   <li>Add the {@code AssistantMessage} to {@link #history}.</li>
+     *   <li>If no tool calls are pending, set {@link #thinkResult} to the final answer
+     *       text and return {@code false}.</li>
+     *   <li>If tool calls are pending, store them for {@link #act()} and return
+     *       {@code true}.</li>
+     * </ul>
+     *
+     * @return {@code true} if {@link #act()} must be called; {@code false} if done
      */
-    private boolean looksLikeFinalAnswer(String response) {
-        if (response.isBlank()) return false;
-        String lower = response.toLowerCase();
-        return lower.contains("总结") || lower.contains("结论")
-                || lower.contains("综上") || lower.contains("in summary")
-                || lower.contains("in conclusion") || lower.contains("to summarize");
-    }
+    protected abstract boolean think();
+
+    /**
+     * Acting phase: execute pending tool calls and add results to {@link #history}.
+     *
+     * <p>Called only when {@link #think()} returned {@code true}.
+     *
+     * @return a short human-readable summary of what was executed
+     *         (used by {@link BaseAgent} for stuck detection)
+     */
+    protected abstract String act();
 }

@@ -1,8 +1,7 @@
 package com.insightagent.app;
 
 import com.insightagent.advisor.LoggerAdvisor;
-import com.insightagent.agent.BaseAgent;
-import com.insightagent.agent.ReActAgent;
+import com.insightagent.agent.YuManus;
 import com.insightagent.chatmemory.FileChatMemoryRepository;
 import com.insightagent.domain.AnalysisReport;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +15,7 @@ import org.springframework.ai.rag.generation.augmentation.ContextualQueryAugment
 import org.springframework.ai.rag.retrieval.search.VectorStoreDocumentRetriever;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
@@ -52,6 +52,10 @@ public class InsightApp {
     /** Tool registry shared with MCP server — avoids duplicating tool instances. */
     @Autowired
     private ToolCallbackProvider insightToolCallbackProvider;
+
+    /** Prototype provider — each call to getObject() returns a fresh YuManus instance. */
+    @Autowired
+    private ObjectProvider<YuManus> yuManusProvider;
 
     public InsightApp(ChatModel deepSeekChatModel,
                       FileChatMemoryRepository memoryRepository,
@@ -186,28 +190,21 @@ public class InsightApp {
     /**
      * Tier 3 ReAct agent loop (Phase 8).
      *
-     * <p>Creates a fresh {@link ToolCallAgent} for the request — the agent maintains its own
-     * in-memory message history across steps and terminates when the model signals completion
-     * or the step limit is reached. Unlike the Tier 1 methods above, there is no persistent
-     * {@code chatId} memory because the agent's multi-step chain already acts as its own context.
+     * <p>Obtains a fresh {@link YuManus} instance per call (prototype-scoped Spring bean)
+     * so each request starts with a clean conversation history. The agent runs the
+     * think → act loop autonomously until the model produces a final answer without
+     * requesting any further tool calls, or the step limit is reached.
+     *
+     * <p>Unlike the Tier 1 methods there is no persistent {@code chatId} — the agent's
+     * own multi-step history already acts as its context.
      *
      * @param message         user message or task description
      * @param selectedSnippet optional news snippet; folded into the first user message
-     * @return final aggregated result from all agent steps
+     * @return final result from the agent run
      */
     public String doRunAgent(String message, String selectedSnippet) {
-        String userText = buildUserText(message, selectedSnippet);
-
-        String agentSystemPrompt = """
-                You are InsightAgent, a multi-step news analysis assistant.
-                You have access to tools: fetchWebPage (fetch a URL), writeFile (save a file), readFile (read a saved file).
-                Break complex tasks into steps. Fetch URLs to get article content. Analyse thoroughly.
-                When you have fully completed the task, end your final response with [FINISHED].
-                """;
-
-        ReActAgent agent = new ReActAgent(
-                chatClient, insightToolCallbackProvider, agentSystemPrompt, BaseAgent.DEFAULT_MAX_STEPS);
-        return agent.run(userText);
+        YuManus agent = yuManusProvider.getObject();
+        return agent.run(buildUserText(message, selectedSnippet));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
