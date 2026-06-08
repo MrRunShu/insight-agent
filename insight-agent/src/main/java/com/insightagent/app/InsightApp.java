@@ -1,7 +1,7 @@
 package com.insightagent.app;
 
 import com.insightagent.advisor.LoggerAdvisor;
-import com.insightagent.agent.YuManus;
+import com.insightagent.agent.InsightAnalyst;
 import com.insightagent.chatmemory.FileChatMemoryRepository;
 import com.insightagent.domain.AnalysisReport;
 import lombok.extern.slf4j.Slf4j;
@@ -53,9 +53,9 @@ public class InsightApp {
     @Autowired
     private ToolCallbackProvider insightToolCallbackProvider;
 
-    /** Prototype provider — each call to getObject() returns a fresh YuManus instance. */
+    /** Prototype provider — each call to getObject() returns a fresh InsightAnalyst instance. */
     @Autowired
-    private ObjectProvider<YuManus> yuManusProvider;
+    private ObjectProvider<InsightAnalyst> yuManusProvider;
 
     public InsightApp(ChatModel deepSeekChatModel,
                       FileChatMemoryRepository memoryRepository,
@@ -190,7 +190,7 @@ public class InsightApp {
     /**
      * Tier 3 ReAct agent loop (Phase 8).
      *
-     * <p>Obtains a fresh {@link YuManus} instance per call (prototype-scoped Spring bean)
+     * <p>Obtains a fresh {@link InsightAnalyst} instance per call (prototype-scoped Spring bean)
      * so each request starts with a clean conversation history. The agent runs the
      * think → act loop autonomously until the model produces a final answer without
      * requesting any further tool calls, or the step limit is reached.
@@ -203,7 +203,7 @@ public class InsightApp {
      * @return final result from the agent run
      */
     public String doRunAgent(String message, String selectedSnippet) {
-        YuManus agent = yuManusProvider.getObject();
+        InsightAnalyst agent = yuManusProvider.getObject();
         return agent.run(buildUserText(message, selectedSnippet));
     }
 

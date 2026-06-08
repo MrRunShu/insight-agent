@@ -9,21 +9,23 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
- * InsightAgent's concrete agent — a named Spring component extending {@link ToolCallAgent}.
+ * InsightAgent 新闻分析师 — 基础档。
  *
- * <p>Prototype-scoped so each request gets a fresh instance with a clean conversation
- * history. (A singleton would fail on the second call because {@link BaseAgent} enforces
- * single-run semantics per instance.)
+ * <p>具体配置层：继承 {@link ToolCallAgent} 的通用机制，
+ * 通过系统提示词和工具集定义"这个 Agent 的身份和能力边界"。
  *
- * <p>Inject via {@code ObjectProvider<YuManus>} and call {@code getObject()} per request:
- * <pre>
- *   YuManus agent = yuManusProvider.getObject();
- *   String result = agent.run(task);
- * </pre>
+ * <p>可用工具：fetchWebPage、writeFile、readFile、terminate
+ *
+ * <p>未来如需更强版本（多来源交叉验证、结构化报告输出等），
+ * 新建 {@code InsightAnalystPro extends ToolCallAgent} 即可，
+ * 机制层无需改动。
+ *
+ * <p>Prototype 作用域：每次请求获得新实例，避免状态污染。
+ * 通过 {@code ObjectProvider<InsightAnalyst>} 注入。
  */
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-public class YuManus extends ToolCallAgent {
+public class InsightAnalyst extends ToolCallAgent {
 
     private static final String SYSTEM_PROMPT = """
             你是 InsightAgent（分析大师），一个多步骤新闻分析助手。
@@ -36,10 +38,8 @@ public class YuManus extends ToolCallAgent {
             只有在确认任务彻底完成时才调用 terminate，中间步骤不要调用。
             """;
 
-    public YuManus(@Qualifier("deepSeekChatModel") ChatModel chatModel,
-                   ToolCallbackProvider insightToolCallbackProvider) {
-        // Build a minimal ChatClient — no memory advisors needed,
-        // the agent manages its own conversation history across steps.
+    public InsightAnalyst(@Qualifier("deepSeekChatModel") ChatModel chatModel,
+                          ToolCallbackProvider insightToolCallbackProvider) {
         super(ChatClient.builder(chatModel).build(),
                 insightToolCallbackProvider,
                 SYSTEM_PROMPT, BaseAgent.DEFAULT_MAX_STEPS);
