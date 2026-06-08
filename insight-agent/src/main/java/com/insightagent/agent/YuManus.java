@@ -31,8 +31,9 @@ public class YuManus extends ToolCallAgent {
               - fetchWebPage：抓取指定 URL 的网页内容
               - writeFile：将分析报告保存到本地文件
               - readFile：读取已保存的本地文件
-            请将复杂任务分步完成：先获取内容，再深入分析，最后给出结论。
-            完成任务后直接给出最终答案，无需任何特殊标记。
+              - terminate：任务全部完成后调用此工具，将最终答案作为参数传入
+            工作流程：先获取内容，再深入分析，最后调用 terminate 提交最终答案。
+            只有在确认任务彻底完成时才调用 terminate，中间步骤不要调用。
             """;
 
     public YuManus(@Qualifier("deepSeekChatModel") ChatModel chatModel,

@@ -54,16 +54,21 @@ public abstract class ReActAgent extends BaseAgent {
      *
      * <p>This method is {@code final} — subclasses implement {@link #think()} and
      * {@link #act()} instead of overriding the step structure.
+     *
+     * <p>{@link #finish()} is <b>not</b> called here automatically. It is the
+     * responsibility of {@link #think()} to call {@code finish()} when the model
+     * explicitly signals task completion (e.g. via a terminate tool call). This
+     * avoids misidentifying a plain-text reasoning step as a final answer.
      */
     @Override
     protected final String step() {
         boolean needsAct = think();
-        if (!needsAct) {
-            log.info("[ReActAgent] No tool calls — final answer reached");
-            finish();
-            return thinkResult != null ? thinkResult.trim() : "";
+        if (needsAct) {
+            return act();
         }
-        return act();
+        // think() is responsible for calling finish() when truly done.
+        // If it didn't, the loop continues (model was reasoning aloud).
+        return thinkResult != null ? thinkResult.trim() : "";
     }
 
     // ── abstract methods ──────────────────────────────────────────────────────
