@@ -12,13 +12,32 @@ const running = ref(false)
 let controller = null
 let stepCounter = 0
 
-// Light theme tuned to match our CSS variables.
+// Warm parchment theme — mirrors the CSS variables defined in style.css
 const themeOverrides = {
   common: {
-    primaryColor: '#2563eb',
-    primaryColorHover: '#1d4ed8',
-    primaryColorPressed: '#1e40af',
+    primaryColor: '#7c4d1e',
+    primaryColorHover: '#9b6028',
+    primaryColorPressed: '#5c3510',
+    primaryColorSuppl: '#9b6028',
     borderRadius: '8px',
+    bodyColor: '#f4edd8',
+    cardColor: '#fdf8ed',
+    modalColor: '#fdf8ed',
+    popoverColor: '#fdf8ed',
+    borderColor: '#d8c9a3',
+    dividerColor: '#d8c9a3',
+    textColorBase: '#2a1a08',
+    textColor1: '#2a1a08',
+    textColor2: '#4a3018',
+    textColor3: '#7a6040',
+    placeholderColor: '#a08060',
+    inputColor: '#fdf8ed',
+    inputColorDisabled: '#f0e8d4',
+    fontFamily:
+      '"Ma Shan Zheng", "Noto Serif SC", "KaiTi", "楷体", "STKaiti", Georgia, serif',
+  },
+  Button: {
+    fontWeightStrong: '500',
   },
 }
 
@@ -120,8 +139,8 @@ function onStop() {
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
+  background: #ecdcc0;           /* one shade deeper than --bg for visual hierarchy */
+  border-bottom: 2px solid #c9ab7c;  /* warm gold separator */
 }
 .brand {
   display: flex;

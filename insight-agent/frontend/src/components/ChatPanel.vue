@@ -145,7 +145,7 @@ watch(() => props.running, scrollToBottom)
   background: var(--accent);
 }
 .msg.user .avatar {
-  background: #4b5563;
+  background: #5a3e28;
 }
 .bubble {
   max-width: 78%;
@@ -156,12 +156,12 @@ watch(() => props.running, scrollToBottom)
 }
 .msg.user .bubble {
   background: var(--accent-soft);
-  border-color: #dbe4ff;
+  border-color: #c9ab82;
 }
 .bubble.error {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
+  background: #fdf0e8;
+  border-color: #e8b494;
+  color: #8b3a1a;
 }
 .user-text {
   white-space: pre-wrap;

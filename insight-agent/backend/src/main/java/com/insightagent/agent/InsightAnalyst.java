@@ -9,19 +9,19 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
- * InsightAgent 新闻分析师 — 基础档。
+ * Domain-specific agent for news analysis — the top of the 4-layer hierarchy.
  *
- * <p>具体配置层：继承 {@link ToolCallAgent} 的通用机制，
- * 通过系统提示词和工具集定义"这个 Agent 的身份和能力边界"。
+ * <p>Configuration layer: extends {@link ToolCallAgent} with a fixed system prompt
+ * and tool set that define this agent's identity and capability boundary.
  *
- * <p>可用工具：fetchWebPage、writeFile、readFile、terminate
+ * <p>Available tools: fetchWebPage, writeFile, readFile, terminate.
  *
- * <p>未来如需更强版本（多来源交叉验证、结构化报告输出等），
- * 新建 {@code InsightAnalystPro extends ToolCallAgent} 即可，
- * 机制层无需改动。
+ * <p>To add a more capable variant (multi-source cross-validation, structured
+ * report output, etc.), subclass {@code ToolCallAgent} directly — the mechanism
+ * layers below do not need to change.
  *
- * <p>Prototype 作用域：每次请求获得新实例，避免状态污染。
- * 通过 {@code ObjectProvider<InsightAnalyst>} 注入。
+ * <p>Prototype-scoped so each request gets a fresh instance with clean state.
+ * Inject via {@code ObjectProvider<InsightAnalyst>}.
  */
 @Component
 @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)

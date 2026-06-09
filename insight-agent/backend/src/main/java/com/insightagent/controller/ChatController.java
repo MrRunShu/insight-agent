@@ -78,8 +78,14 @@ public class ChatController {
     /**
      * Tier 3 ReAct agent — streaming SSE variant (Phase 9).
      *
-     * <p>Uses GET so browser {@code EventSource} can connect directly.
-     * Each agent step is pushed as an SSE event with JSON data:
+     * <p>Uses POST + request body so arbitrarily long article text can be sent
+     * without hitting Tomcat's URL/header size limit (which would occur with GET
+     * query params for multi-thousand-character texts).
+     *
+     * <p>The frontend uses {@code fetch()} with {@code ReadableStream} to consume
+     * the SSE response rather than native {@code EventSource} (which only supports GET).
+     *
+     * <p>Each agent step is pushed as an SSE event:
      * <pre>
      *   event: step
      *   data: {"type":"step","step":1,"content":"Executed: fetchWebPage#3421"}
@@ -88,12 +94,10 @@ public class ChatController {
      *   data: {"type":"done","step":4,"content":"最终分析结论..."}
      * </pre>
      */
-    @GetMapping(value = "/agent/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "Tier 3 ReAct agent — SSE streaming. "
-            + "Each think/act step is pushed as an event; final answer arrives as a 'done' event.")
-    public SseEmitter agentChatStream(
-            @RequestParam String message,
-            @RequestParam(required = false) String selectedSnippet) {
-        return insightApp.doRunAgentStream(message, selectedSnippet);
+    @PostMapping(value = "/agent/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Tier 3 ReAct agent — SSE streaming (POST). "
+            + "Accepts full article text in the body; each think/act step is pushed as an event.")
+    public SseEmitter agentChatStream(@RequestBody ChatRequest request) {
+        return insightApp.doRunAgentStream(request.message(), request.selectedSnippet());
     }
 }

@@ -1,0 +1,75 @@
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+  # Raise Tomcat's default 8 KB header size limit to 256 KB.
+  # Guards against unusually large request headers; article text is sent in the POST body.
+  max-http-request-header-size: 262144
+
+spring:
+  application:
+    name: insight-agent
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/insightdb
+    username: postgres
+    password: ${POSTGRES_PASSWORD:insight}
+    driver-class-name: org.postgresql.Driver
+
+  ai:
+    deepseek:
+      # Spring AI auto-config requires hasText, so default to a placeholder.
+      # Real calls will 401 until you `setx DEEPSEEK_API_KEY sk-...` and reopen shell.
+      api-key: ${DEEPSEEK_API_KEY:placeholder-set-DEEPSEEK_API_KEY-env-var}
+      chat:
+        options:
+          model: deepseek-chat
+          temperature: 0.3
+          max-tokens: 4096
+
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: gemma3:1b
+      embedding:
+        options:
+          model: bge-m3
+
+    mcp:
+      server:
+        name: insight-agent-mcp
+        version: 1.0.0
+        type: SYNC
+        sse-message-endpoint: /mcp/message
+        sse-endpoint: /sse
+
+    vectorstore:
+      pgvector:
+        # BGE-M3 produces 1024-dim vectors
+        dimensions: 1024
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
+        initialize-schema: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /**
+      packages-to-scan: com.insightagent.controller
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# InsightAgent app-specific config
+app:
+  memory:
+    # Where FileChatMemoryRepository writes one .kryo file per conversation.
+    # Override per env via APP_MEMORY_DIR. Default sits next to the running JAR.
+    dir: ${APP_MEMORY_DIR:${user.dir}/chat-memory}

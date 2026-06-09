@@ -1,15 +1,17 @@
 :root {
-  --bg: #f5f6f8;
-  --panel: #ffffff;
-  --border: #e5e7eb;
-  --text: #1f2329;
-  --text-soft: #646a73;
-  --accent: #2563eb;
-  --accent-soft: #eff4ff;
-  --code-bg: #f6f8fa;
+  /* Warm parchment palette */
+  --bg: #f4edd8;           /* main background — warm paper yellow */
+  --panel: #fdf8ed;        /* cards / panels — slightly lighter cream */
+  --border: #d8c9a3;       /* borders — warm tan gold */
+  --text: #2a1a08;         /* body text — deep ink brown */
+  --text-soft: #7a6040;    /* secondary text — mid warm brown */
+  --accent: #7c4d1e;       /* accent — dark ochre / seal red */
+  --accent-soft: #f0e4ce;  /* accent tint — pale yellow-brown */
+  --code-bg: #ede4cc;      /* code blocks — one shade darker than bg */
 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+  /* Calligraphy font stack: Ma Shan Zheng (brush script) → Noto Serif SC → system fallbacks */
+  font-family: "Ma Shan Zheng", "Noto Serif SC", "KaiTi", "楷体",
+    "STKaiti", "FangSong", "仿宋", Georgia, serif;
   color: var(--text);
   font-synthesis: none;
   text-rendering: optimizeLegibility;

@@ -3,6 +3,7 @@
 项目设计-InsightAgent.md
 技术栈调研-2026.md
 未来想法.md
+未来计划.md
 tech_docs/
 
 # Editor / IDE
@@ -35,3 +36,9 @@ notes/
 # Build artifacts (covered also in subproject .gitignore)
 target/
 build/
+
+# Runtime output — generated at startup, never commit
+app.log
+app-err.log
+chat-memory/
+scripts/
