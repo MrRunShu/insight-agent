@@ -1,10 +1,13 @@
 package com.insightagent.agent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Abstract base for all agents — defines the Agent Loop.
@@ -29,6 +32,11 @@ public abstract class BaseAgent {
 
     /** How many identical consecutive step outputs trigger "stuck" handling. */
     private static final int STUCK_THRESHOLD = 2;
+
+    /** SSE timeout: 5 minutes — enough for a long agent run. */
+    private static final long SSE_TIMEOUT_MS = 300_000L;
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Getter
     private AgentState state = AgentState.IDLE;
@@ -104,6 +112,83 @@ public abstract class BaseAgent {
         return finalResult.isBlank() ? "No steps executed." : finalResult;
     }
 
+    /**
+     * Streaming variant of {@link #run}: runs the agent loop asynchronously and pushes
+     * each step result as a Server-Sent Event.
+     *
+     * <p>Event format (JSON, sent as the SSE {@code data} field):
+     * <pre>
+     *   {"type":"step",  "step":N, "content":"step result summary"}
+     *   {"type":"done",  "step":N, "content":"final answer text"}
+     *   {"type":"error", "step":N, "content":"error message"}
+     * </pre>
+     *
+     * <p>The SSE event {@code name} mirrors the {@code type} field, so clients can
+     * filter with {@code eventSource.addEventListener("done", ...)}.
+     *
+     * @param request user's task description
+     * @return {@link SseEmitter} — caller must return this directly from the controller
+     */
+    public final SseEmitter runStream(String request) {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+
+        if (state != AgentState.IDLE) {
+            sendSseEvent(emitter, "error", 0, "Agent is not in IDLE state; create a new instance.");
+            emitter.complete();
+            return emitter;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            log.info("[{}] Starting stream — max {} steps", getClass().getSimpleName(), maxSteps);
+            setState(AgentState.RUNNING);
+            stepResults.clear();
+            currentStep = 0;
+
+            try {
+                onStart(request);
+
+                while (state == AgentState.RUNNING && currentStep < maxSteps) {
+                    currentStep++;
+                    log.info("[{}] Stream step {}/{}", getClass().getSimpleName(), currentStep, maxSteps);
+
+                    String result = step();
+                    stepResults.add(result);
+                    log.debug("[{}] Stream step {} result: {}", getClass().getSimpleName(), currentStep,
+                            result.length() > 120 ? result.substring(0, 120) + "…" : result);
+
+                    // If finish() was called inside step(), this is the final answer
+                    String eventType = (state == AgentState.FINISHED) ? "done" : "step";
+                    sendSseEvent(emitter, eventType, currentStep, result);
+
+                    if (isStuck()) {
+                        log.warn("[{}] Stuck at step {}", getClass().getSimpleName(), currentStep);
+                        handleStuckState();
+                        sendSseEvent(emitter, "done", currentStep,
+                                "⚠️ Agent stuck: repeating the same output. Stopping.");
+                    }
+                }
+
+                if (currentStep >= maxSteps && state == AgentState.RUNNING) {
+                    log.warn("[{}] Reached max steps ({}), terminating", getClass().getSimpleName(), maxSteps);
+                    setState(AgentState.FINISHED);
+                    sendSseEvent(emitter, "done", currentStep,
+                            "⚠️ Agent terminated: reached max steps (" + maxSteps + ").");
+                }
+
+                emitter.complete();
+
+            } catch (Exception e) {
+                log.error("[{}] Stream error at step {}: {}", getClass().getSimpleName(), currentStep,
+                        e.getMessage(), e);
+                setState(AgentState.ERROR);
+                sendSseEvent(emitter, "error", currentStep, "Agent error: " + e.getMessage());
+                emitter.complete();
+            }
+        });
+
+        return emitter;
+    }
+
     // ── abstract / hook methods ───────────────────────────────────────────────
 
     /**
@@ -155,4 +240,23 @@ public abstract class BaseAgent {
         stepResults.add("⚠️ Agent stuck: repeating the same output. Stopping.");
         setState(AgentState.FINISHED);
     }
+
+    // ── SSE helpers ───────────────────────────────────────────────────────────
+
+    /**
+     * Serialize and send one SSE event. Swallows IO errors — a broken connection
+     * should not propagate into the agent loop as an unhandled exception.
+     */
+    private void sendSseEvent(SseEmitter emitter, String type, int step, String content) {
+        try {
+            String json = MAPPER.writeValueAsString(new AgentStreamEvent(type, step, content));
+            emitter.send(SseEmitter.event().name(type).data(json));
+        } catch (Exception e) {
+            log.warn("[{}] Failed to send SSE event (type={}): {}", getClass().getSimpleName(), type,
+                    e.getMessage());
+        }
+    }
+
+    /** Payload for each streamed agent event. */
+    public record AgentStreamEvent(String type, int step, String content) {}
 }

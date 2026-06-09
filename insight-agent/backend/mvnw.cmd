@@ -1,5 +1,5 @@
 @REM ----------------------------------------------------------------------------
-@REM Local Maven Wrapper - points at the Maven binary unpacked into ../.tools.
+@REM Local Maven Wrapper - points at the Maven binary unpacked into ../../.tools.
 @REM Usage:  mvnw <goals>     (e.g. mvnw spring-boot:run)
 @REM No system Maven install required.
 @REM ----------------------------------------------------------------------------
@@ -8,7 +8,7 @@ setlocal
 
 set "PROJECT_DIR=%~dp0"
 set "PROJECT_DIR=%PROJECT_DIR:~0,-1%"
-set "MAVEN_HOME=%PROJECT_DIR%\..\.tools\apache-maven-3.9.9"
+set "MAVEN_HOME=%PROJECT_DIR%\..\..\.tools\apache-maven-3.9.9"
 
 if not exist "%MAVEN_HOME%\bin\mvn.cmd" (
     echo [mvnw] ERROR: Maven not found at "%MAVEN_HOME%".

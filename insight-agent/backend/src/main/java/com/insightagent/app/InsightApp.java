@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * Tier 1 entry point — basic chat for news analysis. Default response path in the three-tier
@@ -205,6 +206,21 @@ public class InsightApp {
     public String doRunAgent(String message, String selectedSnippet) {
         InsightAnalyst agent = yuManusProvider.getObject();
         return agent.run(buildUserText(message, selectedSnippet));
+    }
+
+    /**
+     * Tier 3 ReAct agent — streaming variant (Phase 9).
+     *
+     * <p>Pushes each agent step as an SSE event so the frontend can render the
+     * reasoning chain in real time. Event schema: see {@link BaseAgent#runStream}.
+     *
+     * @param message         user task description
+     * @param selectedSnippet optional highlighted news snippet
+     * @return {@link SseEmitter} that streams step events and a final "done" event
+     */
+    public SseEmitter doRunAgentStream(String message, String selectedSnippet) {
+        InsightAnalyst agent = yuManusProvider.getObject();
+        return agent.runStream(buildUserText(message, selectedSnippet));
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

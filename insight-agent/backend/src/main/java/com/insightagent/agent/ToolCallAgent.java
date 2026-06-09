@@ -1,5 +1,7 @@
 package com.insightagent.agent;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -161,22 +163,55 @@ public class ToolCallAgent extends ReActAgent {
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
+    private static final ObjectMapper TERMINATE_MAPPER = new ObjectMapper();
+
     /**
-     * Execute the terminate tool callback to extract the final answer string.
-     * Falls back to the raw arguments JSON if the callback cannot be found.
+     * Extract the final answer from a terminate tool call.
+     *
+     * <p>DeepSeek does not reliably use the declared parameter name ({@code finalAnswer}).
+     * It sometimes uses {@code arguments}, {@code reason}, {@code answer}, or other names,
+     * and sometimes double-wraps the value as a JSON string inside a JSON object.
+     *
+     * <p>Strategy: parse {@code tc.arguments()} directly, try a priority list of known keys,
+     * and recursively unwrap one level of JSON-string nesting if found.
      */
     private String executeTerminate(AssistantMessage.ToolCall tc) {
-        return Arrays.stream(tools.getToolCallbacks())
-                .filter(cb -> TERMINATE_TOOL.equals(cb.getToolDefinition().name()))
-                .findFirst()
-                .map(cb -> {
-                    try {
-                        return cb.call(tc.arguments());
-                    } catch (Exception e) {
-                        log.warn("[ToolCallAgent] terminate execution error: {}", e.getMessage());
-                        return tc.arguments();  // fall back to raw JSON
-                    }
-                })
-                .orElse(tc.arguments());
+        String raw = tc.arguments();
+        log.info("[ToolCallAgent] executeTerminate raw args: {}",
+                raw.length() > 200 ? raw.substring(0, 200) + "…" : raw);
+        try {
+            JsonNode args = TERMINATE_MAPPER.readTree(raw);
+            // Priority list of field names the model might use
+            String[] keys = {"finalAnswer", "final_answer", "answer", "reason",
+                             "result", "content", "arguments", "text", "response"};
+            for (String key : keys) {
+                if (args.has(key)) {
+                    String value = args.get(key).asText(); // asText() handles both string and non-string nodes
+                    log.info("[ToolCallAgent] executeTerminate extracted key='{}' value={}…",
+                            key, value.length() > 80 ? value.substring(0, 80) : value);
+                    return unwrapIfJson(value);
+                }
+            }
+            // No known key — if there is exactly one field, take its value
+            if (args.size() == 1) {
+                String value = args.fields().next().getValue().asText();
+                return unwrapIfJson(value);
+            }
+        } catch (Exception e) {
+            log.warn("[ToolCallAgent] executeTerminate parse error: {}", e.getMessage());
+        }
+        return raw; // absolute fallback: return raw args
+    }
+
+    /** If {@code s} looks like a JSON object and contains a known answer key, unwrap it. */
+    private String unwrapIfJson(String s) {
+        if (s == null || !s.trim().startsWith("{")) return s;
+        try {
+            JsonNode inner = TERMINATE_MAPPER.readTree(s);
+            for (String k : new String[]{"answer", "final_answer", "finalAnswer", "reason", "result", "content"}) {
+                if (inner.has(k)) return inner.get(k).asText();
+            }
+        } catch (Exception ignored) { /* not valid JSON — use as-is */ }
+        return s;
     }
 }

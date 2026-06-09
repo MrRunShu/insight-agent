@@ -44,3 +44,15 @@ build/
 ### Runtime data ###
 chat-memory/
 tmp/
+*.log
+
+### Frontend (Node / Vite) ###
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

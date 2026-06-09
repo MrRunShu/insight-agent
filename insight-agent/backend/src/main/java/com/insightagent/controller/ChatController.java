@@ -5,10 +5,9 @@ import com.insightagent.domain.AnalysisReport;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.UUID;
 
@@ -74,5 +73,27 @@ public class ChatController {
     public ChatResponse agentChat(@RequestBody ChatRequest request) {
         String reply = insightApp.doRunAgent(request.message(), request.selectedSnippet());
         return new ChatResponse(null, reply);
+    }
+
+    /**
+     * Tier 3 ReAct agent — streaming SSE variant (Phase 9).
+     *
+     * <p>Uses GET so browser {@code EventSource} can connect directly.
+     * Each agent step is pushed as an SSE event with JSON data:
+     * <pre>
+     *   event: step
+     *   data: {"type":"step","step":1,"content":"Executed: fetchWebPage#3421"}
+     *
+     *   event: done
+     *   data: {"type":"done","step":4,"content":"最终分析结论..."}
+     * </pre>
+     */
+    @GetMapping(value = "/agent/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Tier 3 ReAct agent — SSE streaming. "
+            + "Each think/act step is pushed as an event; final answer arrives as a 'done' event.")
+    public SseEmitter agentChatStream(
+            @RequestParam String message,
+            @RequestParam(required = false) String selectedSnippet) {
+        return insightApp.doRunAgentStream(message, selectedSnippet);
     }
 }
