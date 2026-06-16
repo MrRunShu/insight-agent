@@ -64,14 +64,11 @@ function onSubmit(text) {
       },
       onDone(data) {
         running.value = false
-        // Also add the final answer as the last step so the right panel is
-        // never empty (the model may call terminate on step 1 without any
-        // intermediate tool calls).
         steps.value.push({
           id: `step-${++stepCounter}`,
           step: data.step,
-          label: '✅ 最终答案',
-          content: data.content || '',
+          label: '✅ 任务完成',
+          content: `共 ${stepCounter} 步`,
         })
         messages.value.push({ role: 'assistant', content: data.content || '（无内容）' })
       },
