@@ -23,7 +23,7 @@ public class ChatController {
     @Resource
     private InsightApp insightApp;
 
-    public record ChatRequest(String chatId, String message, String selectedSnippet) {}
+    public record ChatRequest(String chatId, String message, String selectedSnippet, Boolean ragEnabled) {}
     public record ChatResponse(String chatId, String reply) {}
 
     @PostMapping
@@ -98,6 +98,7 @@ public class ChatController {
     @Operation(summary = "Tier 3 ReAct agent — SSE streaming (POST). "
             + "Accepts full article text in the body; each think/act step is pushed as an event.")
     public SseEmitter agentChatStream(@RequestBody ChatRequest request) {
-        return insightApp.doRunAgentStream(request.message(), request.selectedSnippet());
+        boolean rag = Boolean.TRUE.equals(request.ragEnabled());
+        return insightApp.doRunAgentStream(request.message(), request.selectedSnippet(), rag);
     }
 }

@@ -218,8 +218,12 @@ public class InsightApp {
      * @param selectedSnippet optional highlighted news snippet
      * @return {@link SseEmitter} that streams step events and a final "done" event
      */
-    public SseEmitter doRunAgentStream(String message, String selectedSnippet) {
+    public SseEmitter doRunAgentStream(String message, String selectedSnippet, boolean ragEnabled) {
         InsightAnalyst agent = yuManusProvider.getObject();
+        if (ragEnabled) {
+            agent.enableRag();
+            log.info("[InsightApp] RAG mode enabled for this agent run");
+        }
         return agent.runStream(buildUserText(message, selectedSnippet));
     }
 

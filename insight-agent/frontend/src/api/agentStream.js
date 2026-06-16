@@ -18,7 +18,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8123/api'
 
 /**
  * Open an agent stream via POST.
- * @param {{message: string, selectedSnippet?: string}} payload
+ * @param {{message: string, selectedSnippet?: string, ragEnabled?: boolean}} payload
  * @param {{onStep?: Function, onDone?: Function, onError?: Function}} handlers
  * @returns {{ close: () => void }} controller — call close() to abort early.
  */
@@ -47,6 +47,7 @@ export function streamAgent(payload, handlers = {}) {
         body: JSON.stringify({
           message: payload.message,
           selectedSnippet: payload.selectedSnippet ?? null,
+          ragEnabled: payload.ragEnabled ?? false,
         }),
         signal: controller.signal,
       })

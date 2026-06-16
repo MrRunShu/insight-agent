@@ -8,6 +8,7 @@ import { streamAgent } from './api/agentStream.js'
 const messages = ref([])
 const steps = ref([])
 const running = ref(false)
+const ragEnabled = ref(false)
 
 let controller = null
 let stepCounter = 0
@@ -52,7 +53,7 @@ function onSubmit(text) {
   running.value = true
 
   controller = streamAgent(
-    { message: text },
+    { message: text, ragEnabled: ragEnabled.value },
     {
       onStep(data) {
         steps.value.push({
@@ -104,12 +105,23 @@ function onStop() {
           <span class="name">InsightAgent</span>
           <span class="tagline">新闻深度分析助手</span>
         </div>
-        <a
-          class="repo"
-          href="http://localhost:8123/api/doc.html"
-          target="_blank"
-          rel="noreferrer"
-        >API 文档</a>
+        <div class="topbar-right">
+          <label class="rag-toggle" :class="{ active: ragEnabled }">
+            <n-switch v-model:value="ragEnabled" size="small" />
+            <span class="rag-label">
+              <span class="rag-icon">📚</span>
+              RAG 知识库
+              <span class="rag-badge" v-if="ragEnabled">ON</span>
+              <span class="rag-badge off" v-else>OFF</span>
+            </span>
+          </label>
+          <a
+            class="repo"
+            href="http://localhost:8123/api/doc.html"
+            target="_blank"
+            rel="noreferrer"
+          >API 文档</a>
+        </div>
       </header>
 
       <main class="body">
@@ -154,6 +166,50 @@ function onStop() {
 .brand .tagline {
   font-size: 13px;
   color: var(--text-soft);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.rag-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  transition: border-color 0.2s, background 0.2s;
+}
+.rag-toggle.active {
+  border-color: #7c4d1e;
+  background: #f4e8d0;
+}
+.rag-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  user-select: none;
+}
+.rag-icon {
+  font-size: 14px;
+}
+.rag-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #7c4d1e;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.rag-badge.off {
+  background: #b0a090;
 }
 .repo {
   font-size: 13px;

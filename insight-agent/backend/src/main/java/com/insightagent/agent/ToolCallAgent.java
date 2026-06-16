@@ -60,11 +60,32 @@ public class ToolCallAgent extends ReActAgent {
     private final ToolCallbackProvider completionTools;
     private final String systemPrompt;
 
+    /**
+     * Optional RAG tool provider (e.g. searchKnowledgeBase). Null by default; activated
+     * via {@link #enableRag(ToolCallbackProvider)} before the agent run starts.
+     */
+    private ToolCallbackProvider ragTools = null;
+
+    /** Overrides systemPrompt when RAG mode is enabled. Null means use systemPrompt. */
+    private String ragSystemPrompt = null;
+
     /** Non-terminate tool calls from the most recent {@link #think()}, consumed by {@link #act()}. */
     private List<AssistantMessage.ToolCall> pendingToolCalls;
 
     /** How many plain-text "keep going" nudges have been issued in this run. */
     private int reasoningNudges = 0;
+
+    /** Enable RAG mode — adds the given provider to the tool schema sent to the LLM. */
+    public void enableRag(ToolCallbackProvider ragToolProvider) {
+        this.ragTools = ragToolProvider;
+    }
+
+    /** Replace the system prompt (used by subclasses to switch to a RAG-aware prompt). */
+    protected void systemPromptOverride(String newPrompt) {
+        // systemPrompt is final; subclasses can call this before run() to swap it.
+        // Achieved via a mutable wrapper field — see ragSystemPrompt below.
+        this.ragSystemPrompt = newPrompt;
+    }
 
     public ToolCallAgent(ChatClient chatClient,
                          ToolCallbackProvider tools,
@@ -96,10 +117,16 @@ public class ToolCallAgent extends ReActAgent {
      */
     @Override
     protected boolean think() {
+        ToolCallbackProvider[] allProviders = ragTools != null
+                ? new ToolCallbackProvider[]{tools, completionTools, ragTools}
+                : new ToolCallbackProvider[]{tools, completionTools};
+
+        String activePrompt = ragSystemPrompt != null ? ragSystemPrompt : systemPrompt;
+
         ChatResponse response = chatClient.prompt()
-                .system(systemPrompt)
+                .system(activePrompt)
                 .messages(history)
-                .toolCallbacks(tools, completionTools)
+                .toolCallbacks(allProviders)
                 .options(DeepSeekChatOptions.builder()
                         .internalToolExecutionEnabled(false)
                         .build())
