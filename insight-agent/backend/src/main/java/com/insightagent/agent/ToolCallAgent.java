@@ -39,20 +39,42 @@ public class ToolCallAgent extends ReActAgent {
     /** Name of the tool the model calls to explicitly signal task completion. */
     private static final String TERMINATE_TOOL = "terminate";
 
+    /**
+     * How many times the model may answer in plain text (without calling terminate)
+     * before we accept its latest substantial answer as final. Prevents the loop from
+     * grinding to {@code maxSteps} when DeepSeek delivers a complete answer as prose
+     * instead of calling the terminate tool.
+     */
+    private static final int MAX_REASONING_NUDGES = 1;
+
+    /** Minimum length for a plain-text response to be treated as a real final answer. */
+    private static final int MIN_FINAL_ANSWER_CHARS = 80;
+
     private final ChatClient chatClient;
     private final ToolCallbackProvider tools;
+    /**
+     * Completion-signal tools (i.e. {@code terminate}). Kept separate from {@link #tools}
+     * so it is sent to the LLM as part of the schema but is NOT shared with the MCP server
+     * — terminate is an internal agent control signal, not a capability for external clients.
+     */
+    private final ToolCallbackProvider completionTools;
     private final String systemPrompt;
 
     /** Non-terminate tool calls from the most recent {@link #think()}, consumed by {@link #act()}. */
     private List<AssistantMessage.ToolCall> pendingToolCalls;
 
+    /** How many plain-text "keep going" nudges have been issued in this run. */
+    private int reasoningNudges = 0;
+
     public ToolCallAgent(ChatClient chatClient,
                          ToolCallbackProvider tools,
+                         ToolCallbackProvider completionTools,
                          String systemPrompt,
                          int maxSteps) {
         super(maxSteps);
         this.chatClient = chatClient;
         this.tools = tools;
+        this.completionTools = completionTools;
         this.systemPrompt = systemPrompt;
     }
 
@@ -77,7 +99,7 @@ public class ToolCallAgent extends ReActAgent {
         ChatResponse response = chatClient.prompt()
                 .system(systemPrompt)
                 .messages(history)
-                .toolCallbacks(tools)
+                .toolCallbacks(tools, completionTools)
                 .options(DeepSeekChatOptions.builder()
                         .internalToolExecutionEnabled(false)
                         .build())
@@ -91,11 +113,26 @@ public class ToolCallAgent extends ReActAgent {
         boolean hasAnyCalls = allCalls != null && !allCalls.isEmpty();
 
         if (!hasAnyCalls) {
-            // Model produced plain text without calling any tool — it is reasoning aloud.
-            // Nudge it to continue rather than treating this as task completion.
+            // Model produced plain text without calling any tool. This is either
+            // mid-reasoning OR a complete answer delivered as prose (DeepSeek often
+            // does the latter even though terminate is now a registered tool).
             String text = assistantMsg.getText();
-            log.info("[ToolCallAgent] think → no tool calls, model reasoning aloud ({} chars)",
-                    text != null ? text.length() : 0);
+            String trimmed = text == null ? "" : text.strip();
+
+            // Safety net: after a bounded number of "keep going" nudges, accept a
+            // substantial plain-text response as the final answer instead of looping
+            // to maxSteps waiting for a terminate call that may never come.
+            if (trimmed.length() >= MIN_FINAL_ANSWER_CHARS && reasoningNudges >= MAX_REASONING_NUDGES) {
+                log.info("[ToolCallAgent] think → accepting plain-text answer as final "
+                        + "({} chars, after {} nudge(s))", trimmed.length(), reasoningNudges);
+                thinkResult = text;
+                finish();
+                return false;
+            }
+
+            reasoningNudges++;
+            log.info("[ToolCallAgent] think → no tool calls ({} chars), nudging to continue ({}/{})",
+                    trimmed.length(), reasoningNudges, MAX_REASONING_NUDGES);
             history.add(new UserMessage(
                     "请继续完成任务。如果已经全部完成，请调用 terminate 工具提交最终答案。"));
             thinkResult = text;

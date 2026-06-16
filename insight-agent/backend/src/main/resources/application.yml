@@ -73,3 +73,8 @@ app:
     # Where FileChatMemoryRepository writes one .kryo file per conversation.
     # Override per env via APP_MEMORY_DIR. Default sits next to the running JAR.
     dir: ${APP_MEMORY_DIR:${user.dir}/chat-memory}
+  jina:
+    # Jina Reader API key — gives higher rate limits (200 RPM vs 20 RPM free).
+    # When quota is exhausted Jina returns 4xx; the tool auto-retries in free mode.
+    # Leave blank to always use free (anonymous) mode.
+    api-key: ${JINA_API_KEY:}

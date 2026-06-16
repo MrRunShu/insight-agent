@@ -1,8 +1,10 @@
 package com.insightagent.agent;
 
+import com.insightagent.tools.TerminateTool;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
@@ -39,9 +41,15 @@ public class InsightAnalyst extends ToolCallAgent {
             """;
 
     public InsightAnalyst(@Qualifier("deepSeekChatModel") ChatModel chatModel,
-                          ToolCallbackProvider insightToolCallbackProvider) {
+                          ToolCallbackProvider insightToolCallbackProvider,
+                          TerminateTool terminateTool) {
         super(ChatClient.builder(chatModel).build(),
+                // Execution tools — shared with the MCP server (web scrape, file ops).
                 insightToolCallbackProvider,
+                // Completion tool — built inline (NOT a Spring bean) so the MCP server,
+                // which auto-discovers ToolCallbackProvider beans, never exposes terminate
+                // to external clients. The LLM still receives its schema for reliable calling.
+                MethodToolCallbackProvider.builder().toolObjects(terminateTool).build(),
                 SYSTEM_PROMPT, BaseAgent.DEFAULT_MAX_STEPS);
     }
 }
