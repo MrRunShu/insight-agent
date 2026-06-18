@@ -42,8 +42,8 @@ watch(() => props.running, scrollToBottom)
         <div class="welcome-icon">🔍</div>
         <h2>InsightAgent</h2>
         <p>
-          粘贴一条新闻链接或描述一个分析任务，Agent 会自动抓取内容、多步推理，
-          并给出结构化分析结论。右侧实时展示它的思考过程。
+          向你的个人论文知识库提问——解释概念、总结某篇论文、或对比多篇论文之间的关联。
+          Agent 会检索相关论文片段、引用来源作答。右侧实时展示它的思考过程。
         </p>
       </div>
 
@@ -66,7 +66,7 @@ watch(() => props.running, scrollToBottom)
         v-model:value="input"
         type="textarea"
         :autosize="{ minRows: 2, maxRows: 6 }"
-        placeholder="输入分析任务，或粘贴新闻 URL…（Ctrl/⌘ + Enter 发送）"
+        placeholder="向你的论文库提问，例如「总结一下 OctoTools 的核心架构」…（Ctrl/⌘ + Enter 发送）"
         :disabled="running"
         @keydown="onKeydown"
       />
@@ -87,7 +87,7 @@ watch(() => props.running, scrollToBottom)
           :disabled="!input.trim()"
           @click="submit"
         >
-          分析
+          提问
         </n-button>
       </div>
     </div>

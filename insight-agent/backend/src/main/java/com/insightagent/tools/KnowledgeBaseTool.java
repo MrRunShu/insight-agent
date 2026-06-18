@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * RAG tool — gives the agent on-demand access to the methodology knowledge base
- * (logical fallacies, Toulmin argumentation model, media literacy, fact-checking).
+ * RAG tool — gives the agent on-demand access to the personal academic paper
+ * knowledge base (the user's collected research papers, embedded into pgvector).
  *
  * <p>Intentionally NOT registered in {@code insightToolCallbackProvider} so the MCP
  * server never exposes it to external clients. Registered separately only when
@@ -24,24 +24,24 @@ import java.util.stream.Collectors;
 @Slf4j
 public class KnowledgeBaseTool {
 
-    private static final double SIMILARITY_THRESHOLD = 0.45;
-    private static final int TOP_K = 3;
+    private static final double SIMILARITY_THRESHOLD = 0.35;
+    private static final int TOP_K = 5;
 
     @Autowired
     private VectorStore insightVectorStore;
 
     @Tool(description = """
-            Search the methodology knowledge base for definitions of logical fallacies,
-            argumentation frameworks (e.g. Toulmin model), media literacy principles,
-            and fact-checking methodology.
-            Call this when you need to:
-            - Identify and name a specific logical fallacy in the text
-            - Apply a structured argumentation framework
-            - Cite source-credibility evaluation criteria
-            Do NOT call this for current events or factual lookups — use fetchWebPage for those.
+            Search the personal academic paper knowledge base (the user's collected
+            research papers). Returns the most relevant passages with their source
+            filename, so answers can cite which paper each claim comes from.
+            Call this whenever you need to:
+            - Answer a question about the content of the user's papers
+            - Explain a concept, method, or result described in a paper
+            - Find and relate ideas across multiple papers (cross-document synthesis)
+            Use a focused query phrasing the concept or question; one topic per call.
             """)
     public String searchKnowledgeBase(
-            @ToolParam(description = "Search query in Chinese or English, e.g. '滑坡谬误', 'Toulmin model', 'source credibility CRAAP'")
+            @ToolParam(description = "Search query in Chinese or English, e.g. 'chain-of-thought prompting', '工具调用 agent 框架', 'retrieval augmented generation'")
             String query) {
 
         log.info("[KnowledgeBaseTool] searching: {}", query);
@@ -54,14 +54,17 @@ public class KnowledgeBaseTool {
 
         if (docs.isEmpty()) {
             log.info("[KnowledgeBaseTool] no results above threshold for: {}", query);
-            return "知识库中未找到与该查询相关的内容（相似度低于阈值）。";
+            return "知识库中未找到与该查询相关的论文内容（相似度低于阈值）。";
         }
 
         String result = docs.stream()
-                .map(Document::getFormattedContent)
+                .map(doc -> {
+                    String source = doc.getMetadata().getOrDefault("source", "论文").toString();
+                    return "【来源：" + source + "】\n" + doc.getFormattedContent();
+                })
                 .collect(Collectors.joining("\n\n---\n\n"));
 
-        log.info("[KnowledgeBaseTool] found {} chunks ({} chars)", docs.size(), result.length());
+        log.info("[KnowledgeBaseTool] found {} chunk(s) ({} chars)", docs.size(), result.length());
         return result;
     }
 }

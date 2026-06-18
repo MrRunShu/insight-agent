@@ -73,6 +73,12 @@
             <artifactId>spring-ai-markdown-document-reader</artifactId>
         </dependency>
 
+        <!-- RAG: PDF document reader (PDFBox-based) — ingest academic papers -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pdf-document-reader</artifactId>
+        </dependency>
+
         <!-- RAG: QuestionAnswerAdvisor (vector-store advisor) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>

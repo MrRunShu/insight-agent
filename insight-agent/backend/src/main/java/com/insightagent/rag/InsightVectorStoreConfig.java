@@ -48,8 +48,8 @@ public class InsightVectorStoreConfig {
         Integer count = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM vector_store", Integer.class);
         if (count == null || count == 0) {
-            log.info("Vector store is empty — embedding knowledge base documents…");
-            store.add(documentLoader.loadMarkdowns());
+            log.info("Vector store is empty — embedding academic paper documents…");
+            store.add(documentLoader.loadPapers());
             log.info("Knowledge base embedded and persisted to PGVector.");
         } else {
             log.info("Vector store has {} documents — reusing existing embeddings.", count);

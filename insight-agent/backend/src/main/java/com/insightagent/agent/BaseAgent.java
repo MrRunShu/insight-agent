@@ -41,6 +41,23 @@ public abstract class BaseAgent {
     @Getter
     private AgentState state = AgentState.IDLE;
 
+    /**
+     * Set during {@link #runStream} so subclasses can push thinking text as a
+     * separate SSE step event before the tool-execution result.
+     * Null in synchronous {@link #run} mode — callers must null-check.
+     */
+    private java.util.function.Consumer<String> intermediateStepEmitter = null;
+
+    /**
+     * Emit a mid-step thinking event (no-op in synchronous {@link #run} mode).
+     * Call from {@code think()} to surface the model's reasoning to the frontend.
+     */
+    protected void emitIntermediateStep(String content) {
+        if (intermediateStepEmitter != null && content != null && !content.isBlank()) {
+            intermediateStepEmitter.accept(content);
+        }
+    }
+
     @Getter
     private int currentStep = 0;
 
@@ -143,6 +160,8 @@ public abstract class BaseAgent {
             setState(AgentState.RUNNING);
             stepResults.clear();
             currentStep = 0;
+            // Wire up intermediate-step emitter so think() can push reasoning text
+            intermediateStepEmitter = text -> sendSseEvent(emitter, "step", currentStep, text);
 
             try {
                 onStart(request);

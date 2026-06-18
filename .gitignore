@@ -42,3 +42,6 @@ app.log
 app-err.log
 chat-memory/
 scripts/
+
+# Local academic paper KB — user's own PDFs, not for VCS
+insight-agent/backend/papers/

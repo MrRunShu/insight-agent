@@ -2,62 +2,75 @@ package com.insightagent.rag;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.reader.markdown.MarkdownDocumentReader;
-import org.springframework.ai.reader.markdown.config.MarkdownDocumentReaderConfig;
-import org.springframework.context.ResourceLoaderAware;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.ResourcePatternResolver;
-import org.springframework.core.io.support.ResourcePatternUtils;
+import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
+import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Loads Markdown knowledge-base documents from {@code classpath:document/*.md}
- * into Spring AI {@link Document} objects for RAG ingestion.
+ * Loads academic-paper PDFs from a configurable directory into Spring AI
+ * {@link Document} objects for RAG ingestion.
  *
- * <p>Each top-level section (separated by horizontal rules {@code ---}) becomes
- * its own Document so retrieval granularity matches the knowledge structure.
+ * <p>Each PDF is read one page per {@link Document} ({@link PagePdfDocumentReader}),
+ * then split into ~token-sized chunks ({@link TokenTextSplitter}) so retrieval
+ * granularity is appropriate for dense paper text. The source filename is attached
+ * as {@code source} metadata and surfaced in RAG citations.
+ *
+ * <p>Directory is set via {@code app.papers.dir} (defaults to {@code ${user.dir}/papers}).
  */
 @Component
 @Slf4j
-public class InsightDocumentLoader implements ResourceLoaderAware {
+public class InsightDocumentLoader {
 
-    private ResourcePatternResolver resolver;
+    /** Directory holding the academic paper PDFs to ingest. Override via {@code app.papers.dir}. */
+    @Value("${app.papers.dir:${user.dir}/papers}")
+    private String papersDir;
 
-    @Override
-    public void setResourceLoader(ResourceLoader resourceLoader) {
-        this.resolver = ResourcePatternUtils.getResourcePatternResolver(resourceLoader);
-    }
+    private final TokenTextSplitter splitter = new TokenTextSplitter();
 
     /**
-     * Reads all {@code *.md} files under {@code classpath:document/} and returns
-     * them as a flat list of Documents (one per section / horizontal-rule block).
+     * Reads all {@code *.pdf} files under {@link #papersDir}, returning them as a
+     * flat list of token-sized chunks (one or more per page), each tagged with its
+     * source filename.
      */
-    public List<Document> loadMarkdowns() {
+    public List<Document> loadPapers() {
         List<Document> all = new ArrayList<>();
-        try {
-            Resource[] resources = resolver.getResources("classpath:document/*.md");
-            for (Resource resource : resources) {
-                String fileName = resource.getFilename();
-                MarkdownDocumentReaderConfig config = MarkdownDocumentReaderConfig.builder()
-                        .withHorizontalRuleCreateDocument(true)   // each --- block = 1 Document
-                        .withIncludeCodeBlock(false)
-                        .withIncludeBlockquote(false)
-                        .withAdditionalMetadata("source", fileName)
-                        .build();
-                MarkdownDocumentReader reader = new MarkdownDocumentReader(resource, config);
-                List<Document> docs = reader.get();
-                log.info("Loaded {} document(s) from {}", docs.size(), fileName);
-                all.addAll(docs);
-            }
-        } catch (IOException e) {
-            log.error("Failed to load knowledge-base documents", e);
+        File dir = new File(papersDir);
+        if (!dir.isDirectory()) {
+            log.warn("Papers directory not found: {} — knowledge base will be empty.", dir.getAbsolutePath());
+            return all;
         }
-        log.info("Knowledge base total: {} document chunks loaded", all.size());
+        File[] pdfs = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".pdf"));
+        if (pdfs == null || pdfs.length == 0) {
+            log.warn("No PDF files in {} — knowledge base will be empty.", dir.getAbsolutePath());
+            return all;
+        }
+
+        PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
+                .withPagesPerDocument(1)
+                .build();
+
+        for (File pdf : pdfs) {
+            try {
+                PagePdfDocumentReader reader =
+                        new PagePdfDocumentReader(new FileSystemResource(pdf), config);
+                List<Document> pages = reader.get();
+                List<Document> chunks = splitter.apply(pages);
+                // Tag every chunk with its source filename for RAG citations.
+                chunks.forEach(doc -> doc.getMetadata().put("source", pdf.getName()));
+                log.info("Loaded {} page(s) → {} chunk(s) from {}", pages.size(), chunks.size(), pdf.getName());
+                all.addAll(chunks);
+            } catch (Exception e) {
+                log.error("Failed to read PDF {}: {}", pdf.getName(), e.getMessage());
+            }
+        }
+        log.info("Knowledge base total: {} paper chunk(s) loaded from {}", all.size(), papersDir);
         return all;
     }
 }

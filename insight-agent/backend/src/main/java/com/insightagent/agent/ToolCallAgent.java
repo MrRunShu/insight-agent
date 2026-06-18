@@ -178,11 +178,17 @@ public class ToolCallAgent extends ReActAgent {
             return false;
         }
 
-        // Regular tool calls — hand off to act()
+        // Regular tool calls — emit thinking text before acting, then hand off to act()
         pendingToolCalls = allCalls;
         log.info("[ToolCallAgent] think → {} tool call(s): {}",
                 pendingToolCalls.size(),
                 pendingToolCalls.stream().map(AssistantMessage.ToolCall::name).toList());
+
+        // Surface the model's reasoning scratchpad as a separate streaming step
+        String thinkText = assistantMsg.getText();
+        if (thinkText != null && !thinkText.isBlank()) {
+            emitIntermediateStep(thinkText.strip());
+        }
         return true;
     }
 

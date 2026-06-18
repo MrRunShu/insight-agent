@@ -43,7 +43,9 @@ const themeOverrides = {
 }
 
 function labelFor(content) {
-  return content.startsWith('Executed:') ? '🔧 工具执行' : '💭 推理'
+  if (content.startsWith('Executed:')) return '🔧 工具执行'
+  if (content.includes('searchKnowledgeBase') || content.includes('fetchWebPage') || content.includes('writeFile')) return '🔧 工具执行'
+  return '💭 推理'
 }
 
 function onSubmit(text) {
@@ -103,14 +105,14 @@ function onStop() {
         <div class="brand">
           <span class="logo">🔍</span>
           <span class="name">InsightAgent</span>
-          <span class="tagline">新闻深度分析助手</span>
+          <span class="tagline">个人论文知识库助手</span>
         </div>
         <div class="topbar-right">
           <label class="rag-toggle" :class="{ active: ragEnabled }">
             <n-switch v-model:value="ragEnabled" size="small" />
             <span class="rag-label">
               <span class="rag-icon">📚</span>
-              RAG 知识库
+              论文库 RAG
               <span class="rag-badge" v-if="ragEnabled">ON</span>
               <span class="rag-badge off" v-else>OFF</span>
             </span>
