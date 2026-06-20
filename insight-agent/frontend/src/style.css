@@ -1,17 +1,19 @@
 :root {
-  /* Warm parchment palette */
-  --bg: #f4edd8;           /* main background — warm paper yellow */
-  --panel: #fdf8ed;        /* cards / panels — slightly lighter cream */
-  --border: #d8c9a3;       /* borders — warm tan gold */
-  --text: #2a1a08;         /* body text — deep ink brown */
-  --text-soft: #7a6040;    /* secondary text — mid warm brown */
-  --accent: #7c4d1e;       /* accent — dark ochre / seal red */
-  --accent-soft: #f0e4ce;  /* accent tint — pale yellow-brown */
-  --code-bg: #ede4cc;      /* code blocks — one shade darker than bg */
+  /* Lightened warm palette — near-white with a faint khaki tint */
+  --bg: #F6F2E9;            /* main background — near-white, faint khaki */
+  --panel: #FFFFFF;         /* cards / panels — clean white */
+  --raised: #FBF8F1;        /* slightly raised surfaces (rails, headers) */
+  --border: #E4DCCB;        /* borders — soft warm tan */
+  --text: #2C2620;          /* body text — warm near-black */
+  --text-soft: #8C8472;     /* secondary text — warm grey */
+  --accent: #9A6A2F;        /* accent — warm amber-brown */
+  --accent-strong: #7C4D1E; /* strong accent */
+  --accent-soft: #F0E7D6;   /* accent tint */
+  --code-bg: #F0EBDD;       /* code blocks */
 
-  /* Calligraphy font stack: Ma Shan Zheng (brush script) → Noto Serif SC → system fallbacks */
-  font-family: "Ma Shan Zheng", "Noto Serif SC", "KaiTi", "楷体",
-    "STKaiti", "FangSong", "仿宋", Georgia, serif;
+  /* Clean sans-serif for a professional assistant feel */
+  font-family: "Noto Sans SC", system-ui, -apple-system, "Segoe UI", Roboto,
+    "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
