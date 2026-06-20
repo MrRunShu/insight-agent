@@ -1,35 +1,44 @@
 # InsightAgent
 
-**新闻深度分析助手** — AI-powered news analysis with a custom ReAct agent loop, real-time SSE streaming, and a Vue 3 frontend.
+**个人 AI 助理** — a personal AI assistant for everyday work and study, built on a
+hand-rolled ReAct agent (Spring AI + DeepSeek) with RAG over your own knowledge base,
+tool use, and real-time step streaming to a Vue 3 frontend.
 
 ---
 
-## Overview
+## What it does
 
-InsightAgent performs multi-step news analysis using a hand-rolled ReAct agent built on Spring AI and DeepSeek. The agent thinks, calls tools (web scraping, file I/O), observes results, and iterates — streaming each step to the browser in real time via Server-Sent Events.
+Ask it anything. It runs a multi-step **ReAct loop** — reason → call a tool → observe →
+repeat — and streams every think/act step to the browser as it happens.
 
-Built to understand agentic reasoning patterns, Spring AI's tool-calling abstraction, and full-stack SSE streaming end to end.
+- **Knowledge-base RAG** — drop your own documents (PDFs) into the knowledge base; the agent
+  retrieves and **cites** them (source + page) whenever your question touches your own materials.
+  Toggle RAG on/off per query to compare grounded vs. ungrounded answers.
+- **Tools** — fetch web pages, read/write files — all orchestrated by the agent, not hard-wired.
+- **Inline diagrams** — the model can draw flowcharts / structures with **Mermaid**, rendered
+  as vector graphics right in the answer.
+- **Upload from the UI** — add a document to the knowledge base on the fly (parsed, chunked and
+  embedded immediately — no restart).
 
-## Technical Highlights
+## Technical highlights
 
 | | |
 |---|---|
-| **Custom ReAct agent** | 4-layer architecture (`BaseAgent → ReActAgent → ToolCallAgent → InsightAnalyst`) built from scratch, no LangChain or LangGraph |
-| **SSE over POST** | `SseEmitter` + `CompletableFuture.runAsync()` on the backend; `fetch()` + `ReadableStream` on the frontend — bypasses `EventSource`'s GET-only limitation for large article payloads |
-| **Spring AI 1.0 GA** | DeepSeek chat + function calling via the unified Spring AI `ChatClient` / `ToolCallback` abstraction |
-| **RAG pipeline** | BGE-M3 embeddings (Ollama, local) + PGVector for retrieval-augmented analysis |
-| **MCP server** | Analysis tools exposed via the Model Context Protocol |
+| **Custom ReAct agent** | 4-layer architecture (`BaseAgent → ReActAgent → ToolCallAgent → InsightAnalyst`), built from scratch — no LangChain / LangGraph |
+| **SSE over POST** | `SseEmitter` + `CompletableFuture.runAsync()` on the backend; `fetch()` + `ReadableStream` on the frontend — bypasses `EventSource`'s GET-only limit for large payloads |
+| **Spring AI 1.0 GA** | DeepSeek chat + tool calling via the unified `ChatClient` / `ToolCallback` abstraction |
+| **RAG** | BGE-M3 embeddings (Ollama, local) + pgvector; robust PDF ingestion via Apache PDFBox |
+| **MCP server** | The agent's tools are also exposed over the Model Context Protocol |
 
 ## Stack
 
 | Layer | Tech |
 |---|---|
 | Backend | Java 17 · Spring Boot 3.4 · Spring AI 1.0 |
-| LLM | DeepSeek Chat (function calling) |
+| LLM | DeepSeek Chat (tool calling) |
 | Embeddings | BGE-M3 via Ollama (local inference) |
 | Vector store | PostgreSQL + pgvector |
-| Frontend | Vue 3 · Vite · Naive UI |
-| API docs | Knife4j / Swagger UI |
+| Frontend | Vue 3 · Vite · Naive UI · Mermaid |
 
 ## Architecture
 
@@ -37,36 +46,20 @@ Built to understand agentic reasoning patterns, Spring AI's tool-calling abstrac
 ┌──────────────────────────────────────────────────────┐
 │                    Vue 3 Frontend                     │
 │   ChatPanel  ←── SSE stream ──→  StepsPanel           │
+│   (Mermaid-rendered answers · 📎 upload)              │
 └──────────────────────┬───────────────────────────────┘
                        │ POST /api/chat/agent/stream
 ┌──────────────────────▼───────────────────────────────┐
 │                 Spring Boot Backend                   │
 │                                                       │
-│  InsightAnalyst  (domain agent)                       │
+│  InsightAnalyst  (the assistant agent)                │
 │    └─ ToolCallAgent  (tool dispatch + terminate)      │
 │         └─ ReActAgent  (think / act loop)             │
 │              └─ BaseAgent  (SSE emitter loop)         │
 │                                                       │
-│  Tools ── WebScrapeTool · TerminateTool · SaveTool    │
-│  RAG   ── PGVector store · BGE-M3 embeddings          │
+│  Tools ── searchKnowledgeBase · fetchWebPage · file   │
+│  RAG   ── pgvector store · BGE-M3 embeddings          │
 └───────────────────────────────────────────────────────┘
-```
-
-## Project Structure
-
-```
-insight-agent/
-├── backend/                    # Spring Boot + Spring AI
-│   └── src/main/java/com/insightagent/
-│       ├── agent/              # 4-layer ReAct architecture
-│       ├── app/                # InsightApp service facade
-│       ├── config/             # CORS, vector store, Swagger
-│       ├── controller/         # REST + SSE endpoints
-│       └── tools/              # WebScrapeTool, TerminateTool, SaveTool
-└── frontend/                   # Vue 3 SPA
-    └── src/
-        ├── components/         # ChatPanel, StepsPanel, MarkdownView
-        └── api/                # SSE client (fetch + ReadableStream)
 ```
 
 ## Quick Start
@@ -75,13 +68,12 @@ insight-agent/
 
 - Java 17+
 - PostgreSQL with the `pgvector` extension (`CREATE EXTENSION vector;`)
-- Ollama running locally with `bge-m3` pulled (for RAG; optional for basic chat)
+- Ollama running locally with `bge-m3` pulled (for RAG)
 - DeepSeek API key
 
 ### Backend
 
 ```powershell
-# Set env vars (one-time; reopen shell after setx)
 setx DEEPSEEK_API_KEY "sk-your-key-here"
 setx POSTGRES_PASSWORD "your-db-password"
 
@@ -89,10 +81,8 @@ cd insight-agent/backend
 .\mvnw.cmd spring-boot:run
 ```
 
-| URL | Description |
-|-----|-------------|
-| `http://localhost:8123/api/doc.html` | Knife4j UI (all endpoints) |
-| `http://localhost:8123/api/chat/agent/stream` | SSE stream endpoint (POST) |
+Knowledge base: drop PDFs into `insight-agent/backend/papers/` (or set `app.papers.dir`).
+They are embedded on first startup, and you can add more later from the UI's **📎 添加论文** button.
 
 ### Frontend
 
@@ -104,4 +94,4 @@ npm run dev          # http://localhost:5173
 
 ---
 
-> This is an ongoing personal project. See commit history for incremental phases.
+> Personal project. See commit history for how it evolved.

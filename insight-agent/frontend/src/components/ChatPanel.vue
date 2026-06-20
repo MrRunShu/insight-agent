@@ -42,8 +42,8 @@ watch(() => props.running, scrollToBottom)
         <div class="welcome-icon">🔍</div>
         <h2>InsightAgent</h2>
         <p>
-          向你的个人论文知识库提问——解释概念、总结某篇论文、或对比多篇论文之间的关联。
-          Agent 会检索相关论文片段、引用来源作答。右侧实时展示它的思考过程。
+          你的私人 AI 助理，服务于工作与学习。问我任何问题，或让我检索你的知识库、
+          联网查资料、多步推理——右侧实时展示它的思考过程。
         </p>
       </div>
 
@@ -66,7 +66,7 @@ watch(() => props.running, scrollToBottom)
         v-model:value="input"
         type="textarea"
         :autosize="{ minRows: 2, maxRows: 6 }"
-        placeholder="向你的论文库提问，例如「总结一下 OctoTools 的核心架构」…（Ctrl/⌘ + Enter 发送）"
+        placeholder="问我任何问题，或让我检索你的知识库、查资料…（Ctrl/⌘ + Enter 发送）"
         :disabled="running"
         @keydown="onKeydown"
       />

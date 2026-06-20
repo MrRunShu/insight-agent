@@ -31,14 +31,15 @@ public class KnowledgeBaseTool {
     private VectorStore insightVectorStore;
 
     @Tool(description = """
-            Search the personal academic paper knowledge base (the user's collected
-            research papers). Returns the most relevant passages with their source
-            filename, so answers can cite which paper each claim comes from.
-            Call this whenever you need to:
-            - Answer a question about the content of the user's papers
-            - Explain a concept, method, or result described in a paper
-            - Find and relate ideas across multiple papers (cross-document synthesis)
+            Search the user's personal knowledge base — their own documents (papers,
+            notes, references). Returns the most relevant passages with their source
+            filename so answers can cite where each claim comes from.
+            Call this whenever the question touches the user's own materials, e.g.:
+            - Answer a question about something in the user's documents
+            - Explain a concept, method, or result described in their materials
+            - Find and relate ideas across multiple documents (cross-document synthesis)
             Use a focused query phrasing the concept or question; one topic per call.
+            Skip it for general-knowledge questions the model already knows.
             """)
     public String searchKnowledgeBase(
             @ToolParam(description = "Search query in Chinese or English, e.g. 'chain-of-thought prompting', '工具调用 agent 框架', 'retrieval augmented generation'")

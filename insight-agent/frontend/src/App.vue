@@ -130,7 +130,7 @@ function onStop() {
         <div class="brand">
           <span class="logo">🔍</span>
           <span class="name">InsightAgent</span>
-          <span class="tagline">个人论文知识库助手</span>
+          <span class="tagline">个人 AI 助理 · 工作学习</span>
         </div>
         <div class="topbar-right">
           <span v-if="uploadStatus" class="upload-status">{{ uploadStatus }}</span>
@@ -142,7 +142,7 @@ function onStop() {
             <n-switch v-model:value="ragEnabled" size="small" />
             <span class="rag-label">
               <span class="rag-icon">📚</span>
-              论文库 RAG
+              知识库 RAG
               <span class="rag-badge" v-if="ragEnabled">ON</span>
               <span class="rag-badge off" v-else>OFF</span>
             </span>
