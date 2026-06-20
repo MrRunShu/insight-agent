@@ -227,6 +227,14 @@ public class ToolCallAgent extends ReActAgent {
                     .orElse("Unknown tool: " + tc.name());
 
             log.info("[ToolCallAgent] act ← {} ({} chars)", tc.name(), result.length());
+
+            // Surface what the tool actually returned to the UI as its own step, so the
+            // user can see the retrieved RAG chunks (not just "executed" / "not found").
+            String preview = result.length() > 800
+                    ? result.substring(0, 800) + "\n…（完整 " + result.length() + " 字）"
+                    : result;
+            emitIntermediateStep("📄 " + tc.name() + " 返回：\n" + preview);
+
             toolResponses.add(new ToolResponseMessage.ToolResponse(tc.id(), tc.name(), result));
         }
 

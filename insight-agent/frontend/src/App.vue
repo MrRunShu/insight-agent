@@ -43,6 +43,7 @@ const themeOverrides = {
 }
 
 function labelFor(content) {
+  if (content.startsWith('📄')) return '📄 检索内容'
   if (content.startsWith('Executed:')) return '🔧 工具执行'
   if (content.includes('searchKnowledgeBase') || content.includes('fetchWebPage') || content.includes('writeFile')) return '🔧 工具执行'
   return '💭 推理'
