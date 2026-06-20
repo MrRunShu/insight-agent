@@ -60,7 +60,11 @@ public class KnowledgeBaseTool {
         String result = docs.stream()
                 .map(doc -> {
                     String source = doc.getMetadata().getOrDefault("source", "论文").toString();
-                    return "【来源：" + source + "】\n" + doc.getFormattedContent();
+                    Object page = doc.getMetadata().get("page_number");
+                    String cite = "【来源：" + source + (page != null ? "，第 " + page + " 页" : "") + "】";
+                    // Use getText() (raw content) rather than getFormattedContent(), which
+                    // prepends noisy metadata (source/distance/file_name) to every chunk.
+                    return cite + "\n" + doc.getText();
                 })
                 .collect(Collectors.joining("\n\n---\n\n"));
 

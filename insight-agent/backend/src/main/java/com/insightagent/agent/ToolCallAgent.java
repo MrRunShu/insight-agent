@@ -230,9 +230,18 @@ public class ToolCallAgent extends ReActAgent {
 
             // Surface what the tool actually returned to the UI as its own step, so the
             // user can see the retrieved RAG chunks (not just "executed" / "not found").
-            String preview = result.length() > 800
-                    ? result.substring(0, 800) + "\n…（完整 " + result.length() + " 字）"
-                    : result;
+            // Spring AI JSON-encodes tool results (quoted + \n-escaped). Unwrap before
+            // previewing so the UI shows clean text, not "...\n..." literals.
+            String clean = result;
+            if (clean.startsWith("\"")) {
+                try {
+                    clean = TERMINATE_MAPPER.readValue(clean, String.class);
+                } catch (Exception ignore) { /* not a JSON string — use raw */ }
+            }
+            clean = clean.replaceAll("\\s+", " ").trim();
+            String preview = clean.length() > 600
+                    ? clean.substring(0, 600) + " …（完整 " + clean.length() + " 字）"
+                    : clean;
             emitIntermediateStep("📄 " + tc.name() + " 返回：\n" + preview);
 
             toolResponses.add(new ToolResponseMessage.ToolResponse(tc.id(), tc.name(), result));
