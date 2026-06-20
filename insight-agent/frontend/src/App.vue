@@ -13,6 +13,30 @@ const ragEnabled = ref(false)
 let controller = null
 let stepCounter = 0
 
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8123/api'
+const uploadStatus = ref('')
+
+// Upload a paper PDF to the knowledge base — parsed, embedded and indexed on the fly.
+async function onUploadPaper(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  uploadStatus.value = `上传中：${file.name}…`
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`${API_BASE}/papers/upload`, { method: 'POST', body: fd })
+    const data = await res.json()
+    uploadStatus.value = data.error
+      ? `❌ ${file.name}：${data.error}`
+      : `✅ 已入库：${data.fileName}（${data.chunks} 块）`
+  } catch (err) {
+    uploadStatus.value = `❌ 上传失败：${err.message}`
+  } finally {
+    e.target.value = ''
+    setTimeout(() => { uploadStatus.value = '' }, 6000)
+  }
+}
+
 // Warm parchment theme — mirrors the CSS variables defined in style.css
 const themeOverrides = {
   common: {
@@ -109,6 +133,11 @@ function onStop() {
           <span class="tagline">个人论文知识库助手</span>
         </div>
         <div class="topbar-right">
+          <span v-if="uploadStatus" class="upload-status">{{ uploadStatus }}</span>
+          <label class="upload-btn" title="上传论文 PDF 到知识库">
+            <input type="file" accept="application/pdf,.pdf" @change="onUploadPaper" hidden />
+            📎 添加论文
+          </label>
           <label class="rag-toggle" :class="{ active: ragEnabled }">
             <n-switch v-model:value="ragEnabled" size="small" />
             <span class="rag-label">
@@ -221,6 +250,33 @@ function onStop() {
 }
 .repo:hover {
   text-decoration: underline;
+}
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.upload-btn:hover {
+  border-color: #7c4d1e;
+  background: #f4e8d0;
+}
+.upload-status {
+  font-size: 12px;
+  color: var(--text-soft);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .body {
   flex: 1;

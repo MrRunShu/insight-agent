@@ -1,26 +1,33 @@
 package com.insightagent.rag;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.ai.document.Document;
-import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
-import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Loads academic-paper PDFs from a configurable directory into Spring AI
- * {@link Document} objects for RAG ingestion.
+ * Loads academic-paper PDFs into Spring AI {@link Document} objects for RAG ingestion.
  *
- * <p>Each PDF is read one page per {@link Document} ({@link PagePdfDocumentReader}),
- * then split into ~token-sized chunks ({@link TokenTextSplitter}) so retrieval
- * granularity is appropriate for dense paper text. The source filename is attached
- * as {@code source} metadata and surfaced in RAG citations.
+ * <p>Text is extracted page-by-page with Apache PDFBox's standard {@link PDFTextStripper},
+ * then split into ~token-sized chunks ({@link TokenTextSplitter}). The source filename and
+ * page number are attached as metadata and surfaced in RAG citations.
+ *
+ * <p>We use PDFBox directly rather than Spring AI's {@code PagePdfDocumentReader}: its
+ * layout-aware stripper ({@code ForkPDFLayoutTextStripper}) throws
+ * {@code StringIndexOutOfBoundsException} on PDFs that embed symbol fonts with no Unicode
+ * mapping (e.g. dingbat/math fonts) — common in academic papers. The standard stripper
+ * degrades gracefully instead of crashing the whole document.
  *
  * <p>Directory is set via {@code app.papers.dir} (defaults to {@code ${user.dir}/papers}).
  */
@@ -34,10 +41,43 @@ public class InsightDocumentLoader {
 
     private final TokenTextSplitter splitter = new TokenTextSplitter();
 
+    /** Directory PDFs are read from / uploaded to. */
+    public String getPapersDir() {
+        return papersDir;
+    }
+
+    /**
+     * Parse a single PDF into token-sized chunks, each tagged with its source filename
+     * and page number. Reused by both startup ingestion and the upload endpoint.
+     */
+    public List<Document> loadPdf(File pdf) {
+        List<Document> pages = new ArrayList<>();
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            int total = doc.getNumberOfPages();
+            for (int p = 1; p <= total; p++) {
+                stripper.setStartPage(p);
+                stripper.setEndPage(p);
+                String text = stripper.getText(doc);
+                if (text == null || text.isBlank()) {
+                    continue;
+                }
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("source", pdf.getName());
+                metadata.put("page_number", p);
+                pages.add(new Document(text, metadata));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("PDF 解析失败: " + pdf.getName() + " — " + e.getMessage(), e);
+        }
+        List<Document> chunks = splitter.apply(pages);
+        log.info("Parsed {} → {} page(s) → {} chunk(s)", pdf.getName(), pages.size(), chunks.size());
+        return chunks;
+    }
+
     /**
      * Reads all {@code *.pdf} files under {@link #papersDir}, returning them as a
-     * flat list of token-sized chunks (one or more per page), each tagged with its
-     * source filename.
+     * flat list of token-sized chunks, each tagged with its source filename.
      */
     public List<Document> loadPapers() {
         List<Document> all = new ArrayList<>();
@@ -51,21 +91,9 @@ public class InsightDocumentLoader {
             log.warn("No PDF files in {} — knowledge base will be empty.", dir.getAbsolutePath());
             return all;
         }
-
-        PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
-                .withPagesPerDocument(1)
-                .build();
-
         for (File pdf : pdfs) {
             try {
-                PagePdfDocumentReader reader =
-                        new PagePdfDocumentReader(new FileSystemResource(pdf), config);
-                List<Document> pages = reader.get();
-                List<Document> chunks = splitter.apply(pages);
-                // Tag every chunk with its source filename for RAG citations.
-                chunks.forEach(doc -> doc.getMetadata().put("source", pdf.getName()));
-                log.info("Loaded {} page(s) → {} chunk(s) from {}", pages.size(), chunks.size(), pdf.getName());
-                all.addAll(chunks);
+                all.addAll(loadPdf(pdf));
             } catch (Exception e) {
                 log.error("Failed to read PDF {}: {}", pdf.getName(), e.getMessage());
             }
