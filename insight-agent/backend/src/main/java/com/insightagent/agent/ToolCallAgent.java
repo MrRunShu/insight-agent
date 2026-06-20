@@ -197,7 +197,15 @@ public class ToolCallAgent extends ReActAgent {
      */
     @Override
     protected String act() {
-        ToolCallback[] callbacks = tools.getToolCallbacks();
+        // Resolve callbacks from ALL active providers, not just the base tools.
+        // RAG-mode tools (e.g. searchKnowledgeBase) live in ragTools — if we only
+        // look in `tools` here, those calls resolve to "Unknown tool" at execution
+        // time even though they were offered to the model in think().
+        List<ToolCallback> allCallbacks = new ArrayList<>(Arrays.asList(tools.getToolCallbacks()));
+        if (ragTools != null) {
+            allCallbacks.addAll(Arrays.asList(ragTools.getToolCallbacks()));
+        }
+        ToolCallback[] callbacks = allCallbacks.toArray(new ToolCallback[0]);
         List<ToolResponseMessage.ToolResponse> toolResponses = new ArrayList<>();
 
         for (AssistantMessage.ToolCall tc : pendingToolCalls) {
