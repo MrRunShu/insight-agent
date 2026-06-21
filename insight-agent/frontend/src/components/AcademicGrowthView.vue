@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { listPapers, groupByCategory, paperFileUrl, uploadPaper, deletePaper } from '../api/papers.js'
 import AssistantChat from './AssistantChat.vue'
+import PdfReader from './PdfReader.vue'
 
 const emit = defineEmits(['home'])
 
@@ -9,6 +10,9 @@ const papers = ref([])
 const openPaper = ref(null)
 const uploadMsg = ref('')
 const rightWidth = ref(330)
+const toc = ref([])
+const reader = ref(null)
+const resizing = ref(false)
 
 const groups = computed(() => groupByCategory(papers.value))
 
@@ -17,8 +21,10 @@ async function refresh() {
 }
 onMounted(refresh)
 
-function open(p) { openPaper.value = p }
-function closePaper() { openPaper.value = null }
+function open(p) { toc.value = []; openPaper.value = p }
+function closePaper() { openPaper.value = null; toc.value = [] }
+function onOutline(list) { toc.value = list || [] }
+function goToc(item) { if (item.page && reader.value) reader.value.scrollToPage(item.page) }
 
 async function onUpload(e) {
   const file = e.target.files?.[0]
@@ -41,13 +47,17 @@ async function removePaper(p) {
 // Drag the middle|right divider to resize.
 function startResize(e) {
   e.preventDefault()
+  resizing.value = true
   const startX = e.clientX
   const startW = rightWidth.value
   const move = (ev) => {
-    const w = startW + (startX - ev.clientX)
-    rightWidth.value = Math.min(620, Math.max(260, w))
+    rightWidth.value = Math.min(640, Math.max(260, startW + (startX - ev.clientX)))
   }
-  const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+  const up = () => {
+    resizing.value = false
+    window.removeEventListener('mousemove', move)
+    window.removeEventListener('mouseup', up)
+  }
   window.addEventListener('mousemove', move)
   window.addEventListener('mouseup', up)
 }
@@ -78,7 +88,17 @@ const chatHint = computed(() =>
           <div class="toc-head">本篇</div>
           <div class="toc-title">{{ openPaper.title }}</div>
           <div class="toc-meta">{{ openPaper.pageCount }} 页 · {{ openPaper.category }}</div>
-          <div class="toc-hint">章节目录见阅读器侧栏（Phase 2 接入本栏）</div>
+          <div v-if="toc.length" class="toc-list">
+            <div
+              v-for="(it, i) in toc"
+              :key="i"
+              class="toc-item"
+              :class="{ sub: it.depth }"
+              :title="it.title"
+              @click="goToc(it)"
+            >{{ it.title }}</div>
+          </div>
+          <div v-else class="toc-hint">本篇 PDF 无内嵌目录，按页阅读即可。</div>
         </div>
       </nav>
 
@@ -106,7 +126,7 @@ const chatHint = computed(() =>
             <span class="reader-title">{{ openPaper.filename }}</span>
             <button class="del" title="删除" @click="removePaper(openPaper)">🗑</button>
           </div>
-          <iframe class="pdf" :src="paperFileUrl(openPaper.id)" :title="openPaper.title"></iframe>
+          <PdfReader ref="reader" class="pdf" :src="paperFileUrl(openPaper.id)" @outline="onOutline" />
         </template>
       </main>
 
@@ -122,6 +142,8 @@ const chatHint = computed(() =>
           :placeholder="openPaper ? '就这篇提问…' : '问问助理…'"
         />
       </aside>
+
+      <div v-if="resizing" class="resize-overlay"></div>
     </div>
   </div>
 </template>
@@ -144,6 +166,10 @@ const chatHint = computed(() =>
 .toc-title { font-size: 12px; font-weight: 600; line-height: 1.4; }
 .toc-meta { font-size: 11px; color: var(--text-soft); margin-top: 3px; }
 .toc-hint { font-size: 10px; color: #c2b79c; margin-top: 8px; line-height: 1.4; }
+.toc-list { margin-top: 8px; max-height: 52vh; overflow-y: auto; }
+.toc-item { font-size: 11.5px; color: var(--text-soft); padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toc-item:hover { background: var(--accent-soft); color: var(--accent-strong); }
+.toc-item.sub { padding-left: 16px; font-size: 11px; color: #a99a80; }
 .middle { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
 .lib-head { padding: 14px 18px 8px; font-size: 14px; font-weight: 600; }
 .muted { color: var(--text-soft); font-weight: 400; }
@@ -162,8 +188,10 @@ const chatHint = computed(() =>
 .reader-head { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--raised); border-bottom: 1px solid var(--border); }
 .reader-title { font-size: 12.5px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reader-head .del { position: static; opacity: 0.6; }
-.pdf { flex: 1; width: 100%; border: none; background: #525659; }
+.pdf { flex: 1; min-height: 0; }
 .divider { width: 10px; cursor: col-resize; background: var(--raised); border-left: 1px solid var(--border); border-right: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: #b7a98a; font-size: 12px; user-select: none; }
+.divider:hover { background: var(--accent-soft); }
+.resize-overlay { position: fixed; inset: 0; z-index: 50; cursor: col-resize; }
 .right { display: flex; flex-direction: column; min-height: 0; }
 .right-head { flex: 0 0 auto; padding: 11px 14px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; background: var(--raised); }
 </style>
