@@ -10,6 +10,7 @@ const papers = ref([])
 const openPaper = ref(null)
 const uploadMsg = ref('')
 const rightWidth = ref(330)
+const leftWidth = ref(160)
 const toc = ref([])
 const reader = ref(null)
 const resizing = ref(false)
@@ -62,6 +63,23 @@ function startResize(e) {
   window.addEventListener('mouseup', up)
 }
 
+function startResizeLeft(e) {
+  e.preventDefault()
+  resizing.value = true
+  const startX = e.clientX
+  const startW = leftWidth.value
+  const move = (ev) => {
+    leftWidth.value = Math.min(360, Math.max(120, startW + (ev.clientX - startX)))
+  }
+  const up = () => {
+    resizing.value = false
+    window.removeEventListener('mousemove', move)
+    window.removeEventListener('mouseup', up)
+  }
+  window.addEventListener('mousemove', move)
+  window.addEventListener('mouseup', up)
+}
+
 const chatHint = computed(() =>
   openPaper.value ? `（针对论文《${openPaper.value.title}》，回答时优先依据本文内容并标注页码）` : '')
 </script>
@@ -81,7 +99,7 @@ const chatHint = computed(() =>
 
     <div class="body">
       <!-- left rail -->
-      <nav class="rail">
+      <nav class="rail" :style="{ width: leftWidth + 'px', minWidth: leftWidth + 'px' }">
         <div class="nav-item active"><span>📚</span> 论文库</div>
         <div class="nav-item"><span>💬</span> 个人对话</div>
         <div v-if="openPaper" class="toc">
@@ -101,6 +119,8 @@ const chatHint = computed(() =>
           <div v-else class="toc-hint">本篇 PDF 无内嵌目录，按页阅读即可。</div>
         </div>
       </nav>
+
+      <div class="divider" title="拖动调整宽度" @mousedown="startResizeLeft">⋮</div>
 
       <!-- middle -->
       <main class="middle">
@@ -158,7 +178,7 @@ const chatHint = computed(() =>
 .upload-msg { font-size: 12px; color: var(--text-soft); }
 .icon-btn { border: 1px solid var(--border); background: var(--panel); border-radius: 7px; width: 28px; height: 26px; cursor: pointer; font-size: 14px; color: var(--text-soft); }
 .body { flex: 1; display: flex; min-height: 0; }
-.rail { width: 150px; min-width: 150px; border-right: 1px solid var(--border); background: var(--raised); padding: 10px 8px; }
+.rail { flex-shrink: 0; border-right: 1px solid var(--border); background: var(--raised); padding: 10px 8px; overflow: hidden; }
 .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--text-soft); cursor: pointer; }
 .nav-item.active { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
 .toc { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
