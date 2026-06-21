@@ -14,26 +14,39 @@ const cards = [
     <header class="topbar">
       <span class="logo">✦</span>
       <span class="name">InsightAgent</span>
-      <div class="tabs">
+      <span class="tag">个人 AI 助理</span>
+    </header>
+
+    <div class="body">
+      <!-- left: feature cards 30% -->
+      <nav class="features">
+        <div class="features-label">功能模块</div>
         <button
           v-for="c in cards"
           :key="c.key"
-          class="tab"
+          class="feat-card"
           :class="{ active: c.active, disabled: !c.active }"
           @click="c.active && emit('open', c.key)"
         >
-          <span class="tab-icon">{{ c.icon }}</span>
-          <span class="tab-title">{{ c.title }}</span>
+          <span class="feat-icon">{{ c.icon }}</span>
+          <div class="feat-text">
+            <span class="feat-title">{{ c.title }}</span>
+            <span class="feat-desc">{{ c.desc }}</span>
+          </div>
           <span v-if="!c.active" class="soon">即将推出</span>
         </button>
-      </div>
-    </header>
+      </nav>
 
-    <div class="chat-wrap">
-      <AssistantChat
-        intro="你好！我帮你统筹工作与学习。点上方功能进入对应模块，或直接告诉我你想做什么。"
-        placeholder="问问助理…"
-      />
+      <!-- divider -->
+      <div class="vline"></div>
+
+      <!-- right: chat 70% -->
+      <div class="chat-wrap">
+        <AssistantChat
+          intro="你好！我帮你统筹工作与学习。点左侧功能进入对应模块，或直接告诉我你想做什么。"
+          placeholder="问问助理…"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -42,54 +55,85 @@ const cards = [
 .welcome { display: flex; flex-direction: column; height: 100vh; }
 
 .topbar {
-  flex: 0 0 auto;
+  flex: 0 0 52px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 20px;
-  height: 54px;
+  gap: 10px;
+  padding: 0 22px;
   background: var(--raised);
   border-bottom: 1px solid var(--border);
 }
-.logo { font-size: 18px; color: var(--accent); }
-.name { font-weight: 600; font-size: 15px; margin-right: 4px; }
+.logo  { font-size: 20px; color: var(--accent); }
+.name  { font-weight: 700; font-size: 16px; }
+.tag   { font-size: 12.5px; color: var(--text-soft); }
 
-.tabs { display: flex; gap: 6px; }
-.tab {
+/* ── body ── */
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* ── left 30% ── */
+.features {
+  flex: 0 0 30%;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.features-label {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.feat-card {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
   background: var(--panel);
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
   color: var(--text);
-  transition: border-color .15s, background .15s;
   position: relative;
+  transition: border-color .15s, transform .1s, background .15s;
+  text-align: left;
 }
-.tab.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; }
-.tab.active:hover { background: var(--accent-soft); }
-.tab.disabled { cursor: default; opacity: 0.6; }
-.tab-icon { font-size: 14px; }
+.feat-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.feat-card.active:hover { transform: translateY(-2px); }
+.feat-card.disabled     { cursor: default; opacity: 0.65; }
+.feat-icon  { font-size: 32px; line-height: 1; flex-shrink: 0; }
+.feat-text  { display: flex; flex-direction: column; gap: 3px; }
+.feat-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.feat-desc  { font-size: 12px; color: var(--text-soft); }
 .soon {
   position: absolute;
-  top: -6px; right: -4px;
-  font-size: 9px;
+  top: 8px; right: 10px;
+  font-size: 10px;
   background: var(--raised);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 1px 5px;
+  padding: 2px 7px;
   color: #b7a98a;
-  white-space: nowrap;
 }
 
+.vline { width: 1px; background: var(--border); flex-shrink: 0; }
+
+/* ── right 70% ── */
 .chat-wrap {
   flex: 1;
-  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 </style>
