@@ -277,6 +277,8 @@ onBeforeUnmount(() => { if (observer) observer.disconnect() })
 :deep(.pg-canvas) { display: block; }
 :deep(.hl-layer) { position: absolute; inset: 0; pointer-events: none; }
 :deep(.hl) { position: absolute; background: rgba(245,205,70,0.4); pointer-events: auto; cursor: pointer; border-radius: 2px; mix-blend-mode: multiply; }
+:deep(.textLayer span::selection) { background: rgba(37, 99, 235, 0.25); }
+:deep(.textLayer br::selection) { background: rgba(37, 99, 235, 0.25); }
 .popup { position: absolute; z-index: 30; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,.18); padding: 5px; display: flex; gap: 5px; align-items: flex-start; max-width: 240px; }
 .popup button { border: 1px solid var(--border); background: var(--panel); border-radius: 6px; padding: 4px 9px; font-size: 12px; cursor: pointer; color: var(--text); white-space: nowrap; }
 .popup button:hover { background: var(--accent-soft); }
