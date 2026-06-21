@@ -6,7 +6,6 @@ import MarkdownView from './MarkdownView.vue'
 const props = defineProps({
   intro: { type: String, default: '' },
   placeholder: { type: String, default: '问我任何问题…' },
-  // Prepended to each user message so the agent focuses (e.g. a specific paper).
   contextHint: { type: String, default: '' },
 })
 
@@ -14,21 +13,41 @@ const messages = ref([])
 const input = ref('')
 const running = ref(false)
 const scrollRef = ref(null)
+const textareaRef = ref(null)
 let controller = null
 
-// New context (e.g. switched paper) → fresh conversation.
-watch(() => props.contextHint, () => { messages.value = []; })
+watch(() => props.contextHint, () => { messages.value = [] })
 
 function scrollDown() {
   nextTick(() => { if (scrollRef.value) scrollRef.value.scrollTop = scrollRef.value.scrollHeight })
 }
 
+// LLM sometimes wraps its final answer in JSON: {"finalAnswer":"..."} or {"answer":"..."}.
+// Extract the actual text; JSON.parse already converts \n → real newlines.
+function unwrapContent(raw) {
+  if (!raw) return raw
+  const trimmed = raw.trim()
+  if (trimmed.startsWith('{')) {
+    try {
+      const obj = JSON.parse(trimmed)
+      const text = obj.finalAnswer ?? obj.final_answer ?? obj.answer ?? obj.content ?? obj.result ?? null
+      if (text) return text
+    } catch { /* not valid JSON */ }
+  }
+  // Safety: unescape literal \n that slipped through
+  return trimmed.includes('\\n') ? trimmed.replace(/\\n/g, '\n').replace(/\\t/g, '\t') : raw
+}
+
 function send() {
   const text = input.value.trim()
   if (!text || running.value) return
+
+  // Clear input — update both the Vue ref and the DOM element directly.
   input.value = ''
+  if (textareaRef.value) textareaRef.value.value = ''
+
   messages.value.push({ role: 'user', content: text })
-  messages.value.push({ role: 'assistant', content: '', thinking: true })
+  messages.value.push({ role: 'assistant', content: '', thinking: true, stepText: '思考中…' })
   running.value = true
   scrollDown()
 
@@ -36,11 +55,27 @@ function send() {
   controller = streamAgent(
     { message, ragEnabled: true },
     {
-      onStep() { scrollDown() },
+      onStep(data) {
+        // Show current agent step text while waiting for final answer.
+        const last = messages.value[messages.value.length - 1]
+        if (last?.thinking && data.content) {
+          last.stepText = data.content.slice(0, 120)
+        }
+        scrollDown()
+      },
+      onChunk(data) {
+        // Streaming chunks of final answer — reveal progressively.
+        const last = messages.value[messages.value.length - 1]
+        if (last?.role === 'assistant') {
+          last.content = unwrapContent(data.content) || ''
+          last.thinking = false
+        }
+        scrollDown()
+      },
       onDone(data) {
         running.value = false
         const last = messages.value[messages.value.length - 1]
-        last.content = data.content || '（无内容）'
+        last.content = unwrapContent(data.content) || last.content || '（无内容）'
         last.thinking = false
         scrollDown()
       },
@@ -67,7 +102,9 @@ function onKeydown(e) {
       <div v-if="intro && !messages.length" class="bubble assistant intro">{{ intro }}</div>
       <template v-for="(m, i) in messages" :key="i">
         <div class="bubble" :class="[m.role, { error: m.isError }]">
-          <span v-if="m.thinking" class="thinking">思考中…</span>
+          <span v-if="m.thinking" class="thinking">
+            <span class="dot-anim"></span>{{ m.stepText || '思考中…' }}
+          </span>
           <MarkdownView v-else-if="m.role === 'assistant'" :source="m.content" />
           <span v-else>{{ m.content }}</span>
         </div>
@@ -75,6 +112,7 @@ function onKeydown(e) {
     </div>
     <div class="composer">
       <textarea
+        ref="textareaRef"
         v-model="input"
         :placeholder="placeholder"
         :disabled="running"
@@ -96,7 +134,12 @@ function onKeydown(e) {
 .bubble.user { align-self: flex-end; background: var(--accent-soft); border: 1px solid #E5D4B8; border-radius: 10px 3px 10px 10px; }
 .bubble.intro { color: var(--text-soft); }
 .bubble.error { color: #a33; }
-.thinking { color: var(--text-soft); font-style: italic; }
+.thinking { color: var(--text-soft); font-style: italic; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.dot-anim {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  display: inline-block; animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
 .composer { border-top: 1px solid var(--border); padding: 9px; display: flex; gap: 7px; align-items: flex-end; }
 .composer textarea { flex: 1; resize: none; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font: inherit; font-size: 13px; background: var(--panel); color: var(--text); outline: none; }
 .composer textarea:focus { border-color: var(--accent); }

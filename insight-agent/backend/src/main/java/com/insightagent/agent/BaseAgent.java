@@ -175,9 +175,12 @@ public abstract class BaseAgent {
                     log.debug("[{}] Stream step {} result: {}", getClass().getSimpleName(), currentStep,
                             result.length() > 120 ? result.substring(0, 120) + "…" : result);
 
-                    // If finish() was called inside step(), this is the final answer
-                    String eventType = (state == AgentState.FINISHED) ? "done" : "step";
-                    sendSseEvent(emitter, eventType, currentStep, result);
+                    // If finish() was called inside step(), stream the final answer in chunks.
+                    if (state == AgentState.FINISHED) {
+                        streamDone(emitter, currentStep, result);
+                    } else {
+                        sendSseEvent(emitter, "step", currentStep, result);
+                    }
 
                     if (isStuck()) {
                         log.warn("[{}] Stuck at step {}", getClass().getSimpleName(), currentStep);
@@ -261,6 +264,29 @@ public abstract class BaseAgent {
     }
 
     // ── SSE helpers ───────────────────────────────────────────────────────────
+
+    /**
+     * Stream the final answer as incremental "chunk" events (word-boundary chunks),
+     * then send the full content as the terminal "done" event for clients that joined late.
+     */
+    private void streamDone(SseEmitter emitter, int step, String content) {
+        int len = content.length();
+        int pos = 0;
+        while (pos < len) {
+            // Advance to the next whitespace boundary, targeting ~30 chars per chunk.
+            int end = Math.min(pos + 30, len);
+            while (end < len && end < pos + 60 && !Character.isWhitespace(content.charAt(end))) {
+                end++;
+            }
+            end = Math.min(end, len);
+            sendSseEvent(emitter, "chunk", step, content.substring(0, end));
+            pos = end;
+            if (pos < len) {
+                try { Thread.sleep(14); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+            }
+        }
+        sendSseEvent(emitter, "done", step, content);
+    }
 
     /**
      * Serialize and send one SSE event. Swallows IO errors — a broken connection

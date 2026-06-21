@@ -79,6 +79,8 @@ export function streamAgent(payload, handlers = {}) {
 
             if (currentEvent === 'step') {
               if (!settled) handlers.onStep?.(data)
+            } else if (currentEvent === 'chunk') {
+              if (!settled) handlers.onChunk?.(data)
             } else if (currentEvent === 'done') {
               if (!settled) {
                 finish()
