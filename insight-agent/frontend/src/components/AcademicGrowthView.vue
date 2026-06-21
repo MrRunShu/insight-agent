@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { listPapers, groupByCategory, paperFileUrl, uploadPaper, deletePaper } from '../api/papers.js'
+import { listPapers, groupByCategory, paperFileUrl, uploadPaper, deletePaper, listAnnotations, createAnnotation, deleteAnnotation } from '../api/papers.js'
 import AssistantChat from './AssistantChat.vue'
 import PdfReader from './PdfReader.vue'
 
@@ -14,6 +14,7 @@ const leftWidth = ref(160)
 const toc = ref([])
 const reader = ref(null)
 const resizing = ref(false)
+const annotations = ref([])
 
 const groups = computed(() => groupByCategory(papers.value))
 
@@ -22,10 +23,13 @@ async function refresh() {
 }
 onMounted(refresh)
 
-function open(p) { toc.value = []; openPaper.value = p }
-function closePaper() { openPaper.value = null; toc.value = [] }
+async function open(p) { toc.value = []; annotations.value = []; openPaper.value = p; await loadAnnotations(p.id) }
+function closePaper() { openPaper.value = null; toc.value = []; annotations.value = [] }
 function onOutline(list) { toc.value = list || [] }
 function goToc(item) { if (item.page && reader.value) reader.value.scrollToPage(item.page) }
+async function loadAnnotations(id) { annotations.value = await listAnnotations(id) }
+async function onCreateAnn(payload) { if (!openPaper.value) return; await createAnnotation(openPaper.value.id, payload); await loadAnnotations(openPaper.value.id) }
+async function onDeleteAnn(annId) { if (!openPaper.value) return; await deleteAnnotation(annId); await loadAnnotations(openPaper.value.id) }
 
 async function onUpload(e) {
   const file = e.target.files?.[0]
@@ -146,7 +150,7 @@ const chatHint = computed(() =>
             <span class="reader-title">{{ openPaper.filename }}</span>
             <button class="del" title="删除" @click="removePaper(openPaper)">🗑</button>
           </div>
-          <PdfReader ref="reader" class="pdf" :src="paperFileUrl(openPaper.id)" @outline="onOutline" />
+          <PdfReader ref="reader" class="pdf" :src="paperFileUrl(openPaper.id)" :annotations="annotations" @outline="onOutline" @create="onCreateAnn" @delete="onDeleteAnn" />
         </template>
       </main>
 

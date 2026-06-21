@@ -35,6 +35,28 @@ export async function recategorizePaper(id, category) {
   return res.json()
 }
 
+/** List annotations for a paper. */
+export async function listAnnotations(id) {
+  const res = await fetch(`${API_BASE}/papers/${id}/annotations`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+/** Create an annotation on a paper. */
+export async function createAnnotation(id, payload) {
+  const res = await fetch(`${API_BASE}/papers/${id}/annotations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  return res.json()
+}
+
+/** Delete an annotation by its own id. */
+export async function deleteAnnotation(annId) {
+  await fetch(`${API_BASE}/annotations/${annId}`, { method: 'DELETE' })
+}
+
 /** Group a flat paper list into {category: [papers]}. */
 export function groupByCategory(papers) {
   const groups = {}
