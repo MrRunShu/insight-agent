@@ -187,9 +187,9 @@ const chatHint = computed(() =>
 .toc-meta { font-size: 11px; color: var(--text-soft); margin-top: 3px; }
 .toc-hint { font-size: 10px; color: #c2b79c; margin-top: 8px; line-height: 1.4; }
 .toc-list { margin-top: 8px; max-height: 52vh; overflow-y: auto; }
-.toc-item { font-size: 11.5px; color: var(--text-soft); padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.toc-item { font-size: 11.5px; color: var(--text); padding: 4px 6px; border-radius: 5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .toc-item:hover { background: var(--accent-soft); color: var(--accent-strong); }
-.toc-item.sub { padding-left: 16px; font-size: 11px; color: #a99a80; }
+.toc-item.sub { padding-left: 16px; font-size: 11px; color: var(--text-soft); }
 .middle { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
 .lib-head { padding: 14px 18px 8px; font-size: 14px; font-weight: 600; }
 .muted { color: var(--text-soft); font-weight: 400; }
